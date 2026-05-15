@@ -190,7 +190,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     return;
   }
 
-  const { autoRun, apiKey } = await chrome.storage.sync.get(['autoRun', 'apiKey']);
+  const { autoRun, apiKey } = await chrome.storage.local.get(['autoRun', 'apiKey']);
   if (!autoRun || !apiKey) return;
 
   try {
@@ -209,7 +209,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 // =============================================
 
 async function handleCondense(tabId, content, title, wordCount, mode, densityMode, densityLevel) {
-  const settings = await chrome.storage.sync.get([
+  const settings = await chrome.storage.local.get([
     'provider', 'apiKey', 'model', 'baseUrl'
   ]);
 
@@ -259,6 +259,14 @@ async function callOpenAI(settings, systemPrompt, userPrompt) {
     /\/+$/,
     ''
   );
+
+  // Block non-HTTPS URLs (except localhost) to prevent API key leakage
+  const urlObj = new URL(baseUrl);
+  const isLocalhost = urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1';
+  if (urlObj.protocol !== 'https:' && !isLocalhost) {
+    throw new Error('Custom endpoint must use HTTPS (except localhost).');
+  }
+
   const model = settings.model || 'gpt-4o-mini';
 
   const resp = await fetch(`${baseUrl}/chat/completions`, {

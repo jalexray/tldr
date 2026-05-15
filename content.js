@@ -79,7 +79,7 @@
   // --- Condense entry point ---
 
   async function condense() {
-    const settings = await chrome.storage.sync.get([
+    const settings = await chrome.storage.local.get([
       'displayMode', 'densityMode', 'densityLevel'
     ]);
     currentMode = settings.displayMode || 'overlay';
@@ -176,23 +176,48 @@
     const reduction = Math.round(
       (1 - condensedWords / originalWordCount) * 100
     );
-    const html = renderMarkdown(markdown);
 
-    overlay.innerHTML = `
-      <div class="tldr-container">
-        <div class="tldr-header">
-          <div class="tldr-header-left">
-            <span class="tldr-logo">TLDR</span>
-            <span class="tldr-stats">
-              ${originalWordCount.toLocaleString()} &rarr; ${condensedWords.toLocaleString()} words
-              <strong>(${reduction}% less reading)</strong>
-            </span>
-          </div>
-          <button class="tldr-close" id="tldr-close">&times; Show original</button>
-        </div>
-        <div class="tldr-content">${html}</div>
-      </div>`;
-    overlay.querySelector('#tldr-close').addEventListener('click', dismiss);
+    // Build overlay DOM safely (no innerHTML with LLM content)
+    const container = document.createElement('div');
+    container.className = 'tldr-container';
+
+    const header = document.createElement('div');
+    header.className = 'tldr-header';
+
+    const headerLeft = document.createElement('div');
+    headerLeft.className = 'tldr-header-left';
+
+    const logo = document.createElement('span');
+    logo.className = 'tldr-logo';
+    logo.textContent = 'TLDR';
+
+    const stats = document.createElement('span');
+    stats.className = 'tldr-stats';
+    stats.textContent = `${originalWordCount.toLocaleString()} \u2192 ${condensedWords.toLocaleString()} words `;
+    const strong = document.createElement('strong');
+    strong.textContent = `(${reduction}% less reading)`;
+    stats.appendChild(strong);
+
+    headerLeft.appendChild(logo);
+    headerLeft.appendChild(stats);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tldr-close';
+    closeBtn.textContent = '\u00D7 Show original';
+    closeBtn.addEventListener('click', dismiss);
+
+    header.appendChild(headerLeft);
+    header.appendChild(closeBtn);
+
+    const content = document.createElement('div');
+    content.className = 'tldr-content';
+    renderMarkdownDOM(markdown, content);
+
+    container.appendChild(header);
+    container.appendChild(content);
+
+    overlay.innerHTML = '';
+    overlay.appendChild(container);
     overlay.scrollTop = 0;
   }
 
@@ -497,14 +522,32 @@
   }
 
   // =============================================
-  //  MARKDOWN → HTML RENDERER (overlay mode)
+  //  MARKDOWN → DOM RENDERER (overlay mode)
+  //  Uses DOM APIs (textContent / createElement) to
+  //  avoid innerHTML with LLM-generated content.
   // =============================================
 
-  function renderMarkdown(md) {
+  function renderMarkdownDOM(md, container) {
     const lines = md.split('\n');
-    const parts = [];
-    let ulOpen = false;
-    let subOpen = false;
+    let currentUl = null;   // top-level <ul>
+    let currentLi = null;   // last top-level <li>
+    let subUl = null;        // nested <ul> inside currentLi
+
+    function closeSubList() {
+      if (subUl) {
+        currentLi.appendChild(subUl);
+        subUl = null;
+      }
+    }
+
+    function closeTopList() {
+      closeSubList();
+      if (currentUl) {
+        container.appendChild(currentUl);
+        currentUl = null;
+        currentLi = null;
+      }
+    }
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -514,42 +557,68 @@
       const isTopBullet = !isSubBullet && /^[-*]\s/.test(trimmed);
       const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)/);
 
-      if (!isSubBullet && subOpen) {
-        parts.push('</ul></li>');
-        subOpen = false;
-      }
-      if (!isTopBullet && !isSubBullet && ulOpen) {
-        parts.push('</ul>');
-        ulOpen = false;
-      }
+      if (!isSubBullet && subUl) closeSubList();
+      if (!isTopBullet && !isSubBullet && currentUl) closeTopList();
 
       if (headingMatch) {
         const tag = headingMatch[1].length <= 2 ? 'h2' : 'h3';
-        parts.push(`<${tag}>${fmt(headingMatch[2])}</${tag}>`);
+        const el = document.createElement(tag);
+        appendFormattedText(el, headingMatch[2]);
+        container.appendChild(el);
       } else if (isTopBullet) {
-        if (!ulOpen) {
-          parts.push('<ul>');
-          ulOpen = true;
-        }
-        parts.push(`<li>${fmt(trimmed.replace(/^[-*]\s+/, ''))}</li>`);
+        if (!currentUl) currentUl = document.createElement('ul');
+        currentLi = document.createElement('li');
+        appendFormattedText(currentLi, trimmed.replace(/^[-*]\s+/, ''));
+        currentUl.appendChild(currentLi);
       } else if (isSubBullet) {
-        if (!subOpen) {
-          const last = parts[parts.length - 1];
-          if (last && last.endsWith('</li>')) {
-            parts[parts.length - 1] = last.slice(0, -5);
-          }
-          parts.push('<ul>');
-          subOpen = true;
-        }
-        parts.push(`<li>${fmt(trimmed.replace(/^[-*]\s+/, ''))}</li>`);
+        if (!subUl) subUl = document.createElement('ul');
+        const li = document.createElement('li');
+        appendFormattedText(li, trimmed.replace(/^[-*]\s+/, ''));
+        subUl.appendChild(li);
       } else {
-        parts.push(`<p>${fmt(trimmed)}</p>`);
+        const p = document.createElement('p');
+        appendFormattedText(p, trimmed);
+        container.appendChild(p);
       }
     }
 
-    if (subOpen) parts.push('</ul></li>');
-    if (ulOpen) parts.push('</ul>');
-    return parts.join('\n');
+    closeTopList();
+  }
+
+  // Appends text with **bold** and *italic* as DOM nodes (no innerHTML).
+  function appendFormattedText(parent, text) {
+    // Split on bold and italic markers, create text/strong/em nodes
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      // Text before this match
+      if (match.index > lastIndex) {
+        parent.appendChild(
+          document.createTextNode(text.slice(lastIndex, match.index))
+        );
+      }
+
+      if (match[2]) {
+        // **bold**
+        const strong = document.createElement('strong');
+        strong.textContent = match[2];
+        parent.appendChild(strong);
+      } else if (match[3]) {
+        // *italic*
+        const em = document.createElement('em');
+        em.textContent = match[3];
+        parent.appendChild(em);
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Remaining text after last match
+    if (lastIndex < text.length) {
+      parent.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
   }
 
   function esc(s) {
@@ -557,12 +626,5 @@
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-  }
-
-  function fmt(s) {
-    let o = esc(s);
-    o = o.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    o = o.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    return o;
   }
 })();

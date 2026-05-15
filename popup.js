@@ -32,7 +32,7 @@ const DENSITY_DESCS = [
 
 // ── Load saved settings ──
 
-chrome.storage.sync.get(
+chrome.storage.local.get(
   ['provider', 'apiKey', 'model', 'baseUrl', 'displayMode', 'densityMode', 'densityLevel', 'autoRun'],
   (s) => {
     $('#autoRun').checked = !!s.autoRun;
@@ -150,7 +150,7 @@ $('#save').addEventListener('click', () => {
     return;
   }
 
-  chrome.storage.sync.set(settings, () => {
+  chrome.storage.local.set(settings, () => {
     const el = $('#saved');
     el.classList.remove('hidden');
     setTimeout(() => el.classList.add('hidden'), 2000);
@@ -165,7 +165,7 @@ $('#condense').addEventListener('click', async () => {
     return;
   }
 
-  await chrome.storage.sync.set(settings);
+  await chrome.storage.local.set(settings);
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
