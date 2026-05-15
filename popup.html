@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>TLDR</h1>
+      <span class="tagline">Density-aware page condenser</span>
+    </div>
+
+    <button id="condense" class="btn primary">Condense this page</button>
+    <div id="status" class="status"></div>
+
+    <button id="settings-toggle" class="btn toggle">Settings</button>
+
+    <div class="settings hidden" id="settings">
+      <label class="check-label" style="margin-bottom:10px">
+        <input type="checkbox" id="autoRun">
+        <span>Auto-condense on page load</span>
+      </label>
+
+      <label for="displayMode">Display mode</label>
+      <select id="displayMode">
+        <option value="overlay">Full page overlay</option>
+        <option value="inline">Replace in page</option>
+      </select>
+
+      <label>Condensation</label>
+      <div class="density-control">
+        <label class="check-label">
+          <input type="checkbox" id="densitySmart" checked>
+          <span>Smart (density-aware)</span>
+        </label>
+        <div id="densitySliderGroup" class="hidden">
+          <input type="range" id="densityLevel" min="1" max="5" value="3" step="1" list="density-ticks">
+          <datalist id="density-ticks">
+            <option value="1"></option>
+            <option value="2"></option>
+            <option value="3"></option>
+            <option value="4"></option>
+            <option value="5"></option>
+          </datalist>
+          <div class="density-range-labels">
+            <span>Some fluff</span>
+            <span>Exec summary</span>
+          </div>
+          <div id="densityDesc" class="density-desc"></div>
+        </div>
+      </div>
+
+      <label for="provider">Provider</label>
+      <select id="provider">
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="custom">Custom (OpenAI-compatible)</option>
+      </select>
+
+      <label for="apiKey">API Key</label>
+      <input type="password" id="apiKey" placeholder="Enter your API key">
+
+      <label for="model">Model</label>
+      <select id="model"></select>
+
+      <div id="customModelGroup" class="field-group hidden">
+        <input type="text" id="customModel" placeholder="Enter model ID">
+      </div>
+
+      <div id="baseUrlGroup" class="field-group hidden">
+        <label for="baseUrl">Base URL</label>
+        <input type="text" id="baseUrl" placeholder="http://localhost:11434/v1">
+      </div>
+
+      <button id="save" class="btn secondary">Save settings</button>
+      <div id="saved" class="saved hidden">Settings saved</div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

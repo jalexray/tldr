@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "TLDR",
+  "version": "1.0.0",
+  "description": "Condense any web page into high-density headlines and bullets using AI",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TLDR — Condense this page"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "condense-page": {
+      "suggested_key": {
+        "default": "Alt+T",
+        "mac": "Alt+T"
+      },
+      "description": "Condense or restore the current page"
+    }
+  }
+}
