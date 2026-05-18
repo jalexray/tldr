@@ -412,17 +412,29 @@
         <span class="tldr-bar-wordmark">TLDR<span class="tldr-bar-dot">.</span></span>
         ${isLoading ? '<span class="tldr-bar-spinner"></span>' : ''}
         <span class="tldr-bar-stats">${statsHTML}</span>
-        <button class="tldr-bar-close">${isLoading ? '\u00d7 CANCEL' : '\u00d7 UNDO'}</button>
+        <button class="tldr-bar-close tldr-bar-undo">${isLoading ? '\u00d7 CANCEL' : '\u00d7 UNDO'}</button>
+        ${!isLoading ? '<button class="tldr-bar-close tldr-bar-dismiss">\u00d7 CLOSE</button>' : ''}
       </div>
       <div class="tldr-bar-stripe"></div>`;
 
     document.body.appendChild(inlineBar);
 
-    inlineBar.querySelector('.tldr-bar-close').addEventListener('click', dismiss);
+    inlineBar.querySelector('.tldr-bar-undo').addEventListener('click', dismiss);
+    const dismissBtn = inlineBar.querySelector('.tldr-bar-dismiss');
+    if (dismissBtn) dismissBtn.addEventListener('click', dismissBarOnly);
     inlineBar.__keyHandler = (e) => {
       if (e.key === 'Escape') dismiss();
     };
     document.addEventListener('keydown', inlineBar.__keyHandler);
+  }
+
+  function dismissBarOnly() {
+    if (inlineBar) {
+      if (inlineBar.__keyHandler)
+        document.removeEventListener('keydown', inlineBar.__keyHandler);
+      inlineBar.remove();
+      inlineBar = null;
+    }
   }
 
   // =============================================
