@@ -497,9 +497,11 @@
 
   function updateLifetimeScore(wordsCut) {
     if (wordsCut <= 0) return;
-    chrome.storage.local.get('lifetimeWordsCut', (s) => {
+    chrome.storage.local.get(['lifetimeWordsCut', 'scoreLog'], (s) => {
       const newTotal = (s.lifetimeWordsCut || 0) + wordsCut;
-      chrome.storage.local.set({ lifetimeWordsCut: newTotal });
+      const log = s.scoreLog || [];
+      log.push({ words: wordsCut, ts: Date.now() });
+      chrome.storage.local.set({ lifetimeWordsCut: newTotal, scoreLog: log });
     });
   }
 

@@ -74,7 +74,7 @@ function lookupBook(words) {
 
 chrome.storage.local.get(
   ['provider', 'apiKey', 'model', 'baseUrl', 'displayMode',
-   'densityMode', 'densityLevel', 'autoRun', 'lifetimeWordsCut', 'excludePatterns'],
+   'densityMode', 'densityLevel', 'autoRun', 'lifetimeWordsCut', 'scoreLog', 'excludePatterns'],
   async (s) => {
     // Show intro if no API key is set
     if (!s.apiKey) {
@@ -117,7 +117,9 @@ chrome.storage.local.get(
     }
 
     syncUI();
-    renderScore(s.lifetimeWordsCut || 0);
+    scoreLog = s.scoreLog || [];
+    totalWordsCut = s.lifetimeWordsCut || 0;
+    renderScore();
   }
 );
 
@@ -321,15 +323,38 @@ function saveExcludePatterns() {
   chrome.storage.local.set({ excludePatterns });
 }
 
-function renderScore(words) {
+let scoreLog = [];
+let totalWordsCut = 0;
+let scorePeriod = 'all'; // 'all' | '7d' | 'today'
+
+const SCORE_PERIODS = [
+  { id: 'all',   label: 'ALL TIME' },
+  { id: '7d',    label: '7 DAYS' },
+  { id: 'today', label: 'TODAY' },
+];
+
+function getScoreForPeriod(period) {
+  if (period === 'all') return totalWordsCut;
+  const now = Date.now();
+  const cutoff = period === 'today'
+    ? new Date().setHours(0, 0, 0, 0)
+    : now - 7 * 24 * 60 * 60 * 1000;
+  return scoreLog
+    .filter(e => e.ts >= cutoff)
+    .reduce((sum, e) => sum + e.words, 0);
+}
+
+function renderScore() {
+  const words = getScoreForPeriod(scorePeriod);
   const book = lookupBook(words);
   const panel = $('#scorePanel');
   const titleHtml = book.title.replace(/"([^"]+)"/, '<em>$1</em>');
+  const periodLabel = SCORE_PERIODS.find(p => p.id === scorePeriod).label;
 
   panel.innerHTML = `
     <div class="score-label">
-      <span>// LIFETIME SLOP CUT</span>
-      ${words > 0 ? '<span style="color:#555">SINCE INSTALL</span>' : ''}
+      <span>// SLOP CUT</span>
+      <span class="score-period-toggle" id="scorePeriodToggle">${periodLabel}</span>
     </div>
     <div class="score-number">${words.toLocaleString()}<span class="unit">words</span></div>
     <div class="score-book">
@@ -340,6 +365,12 @@ function renderScore(words) {
       </div>
     </div>
   `;
+
+  $('#scorePeriodToggle').addEventListener('click', () => {
+    const idx = SCORE_PERIODS.findIndex(p => p.id === scorePeriod);
+    scorePeriod = SCORE_PERIODS[(idx + 1) % SCORE_PERIODS.length].id;
+    renderScore();
+  });
 }
 
 function getEffectiveModel() {

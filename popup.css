@@ -417,6 +417,16 @@ body {
   font-weight: 600;
 }
 
+.score-period-toggle {
+  cursor: pointer;
+  color: var(--haz);
+  transition: color 0.12s;
+}
+
+.score-period-toggle:hover {
+  color: #fff;
+}
+
 .score-number {
   font-family: 'Anton', 'Archivo Black', sans-serif;
   font-size: 36px;
