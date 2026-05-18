@@ -277,8 +277,10 @@
   // =============================================
 
   function condenseInline() {
-    const root = findMainContent() || document.body;
-    const paragraphs = collectParagraphs(root);
+    // Use document.body for inline mode — we want to condense ALL visible
+    // text on the page (comments, sidebars, etc.), not just the "main article".
+    // The skip patterns filter out nav/footer/ads.
+    const paragraphs = collectParagraphs(document.body);
 
     if (paragraphs.length === 0) {
       showError('\u00d7 NO PARAGRAPHS FOUND');
