@@ -311,7 +311,7 @@ function showStatus(msg, type) {
   el.className = 'pop-status' + (type === 'error' ? ' error' : type === 'saved' ? ' saved' : '');
   if (type) {
     setTimeout(() => {
-      el.textContent = '// ${SHORTCUT} TO TRIGGER';
+      el.textContent = `// ${SHORTCUT} TO TRIGGER`;
       el.className = 'pop-status';
     }, 3000);
   }
