@@ -255,6 +255,7 @@ function showStatus(msg, type) {
 
 function flashSaved() {
   showStatus('// SETTINGS SAVED', 'saved');
+  chrome.storage.local.set(getAllSettings());
 }
 
 // ── Events ──
