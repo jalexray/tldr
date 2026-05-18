@@ -178,15 +178,8 @@ chrome.commands.onCommand.addListener(async (command) => {
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return;
 
-  // Skip non-web pages
-  if (
-    !tab.url ||
-    tab.url.startsWith('chrome://') ||
-    tab.url.startsWith('chrome-extension://') ||
-    tab.url.startsWith('about:') ||
-    tab.url.startsWith('edge://') ||
-    tab.url === 'chrome://newtab/'
-  ) {
+  // Only run on http/https pages (blocks file://, data:, blob:, chrome://, etc.)
+  if (!tab.url || !(tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
     return;
   }
 

@@ -17,10 +17,13 @@
     <button id="settings-toggle" class="btn toggle">Settings</button>
 
     <div class="settings hidden" id="settings">
-      <label class="check-label" style="margin-bottom:10px">
+      <label class="check-label">
         <input type="checkbox" id="autoRun">
         <span>Auto-condense on page load</span>
       </label>
+      <div id="autoRunWarning" class="warning hidden">
+        Every page you visit will have its content sent to your configured LLM API. Avoid sensitive sites (banking, medical, email) while enabled.
+      </div>
 
       <label for="displayMode">Display mode</label>
       <select id="displayMode">

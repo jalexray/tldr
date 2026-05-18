@@ -34,8 +34,12 @@ const DENSITY_DESCS = [
 
 chrome.storage.local.get(
   ['provider', 'apiKey', 'model', 'baseUrl', 'displayMode', 'densityMode', 'densityLevel', 'autoRun'],
-  (s) => {
-    $('#autoRun').checked = !!s.autoRun;
+  async (s) => {
+    // Sync auto-run checkbox with actual permission state
+    const hasAllUrls = await chrome.permissions.contains({ origins: ['<all_urls>'] });
+    $('#autoRun').checked = !!s.autoRun && hasAllUrls;
+    $('#autoRunWarning').classList.toggle('hidden', !$('#autoRun').checked);
+
     if (s.displayMode) $('#displayMode').value = s.displayMode;
     if (s.provider) $('#provider').value = s.provider;
     if (s.apiKey) $('#apiKey').value = s.apiKey;
@@ -134,6 +138,20 @@ $('#provider').addEventListener('change', () => {
 
 $('#model').addEventListener('change', syncUI);
 $('#densitySmart').addEventListener('change', syncUI);
+
+$('#autoRun').addEventListener('change', async () => {
+  if ($('#autoRun').checked) {
+    const granted = await chrome.permissions.request({
+      origins: ['<all_urls>']
+    });
+    if (!granted) {
+      $('#autoRun').checked = false;
+    }
+  } else {
+    await chrome.permissions.remove({ origins: ['<all_urls>'] });
+  }
+  $('#autoRunWarning').classList.toggle('hidden', !$('#autoRun').checked);
+});
 $('#densityLevel').addEventListener('input', () => {
   $('#densityDesc').textContent = DENSITY_DESCS[$('#densityLevel').value];
 });
