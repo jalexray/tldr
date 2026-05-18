@@ -89,15 +89,26 @@
         </div>
       </div>
 
-      <!-- Auto-run -->
-      <div class="pop-section-sm">
+      <!-- Auto-condense section -->
+      <div class="pop-section">
+        <div class="pop-label">// Auto-condense</div>
         <label class="pop-check" id="autoRunLabel">
           <span class="pop-check-box" id="autoRunBox"></span>
           <input type="checkbox" id="autoRun">
-          Auto-condense on page load
+          Run on page load
         </label>
         <div id="autoRunWarning" class="pop-warning hidden">
           Every page you visit will have its content sent to your configured LLM API.
+        </div>
+
+        <div id="excludeSection" class="hidden">
+          <div class="pop-label" style="margin-top:12px">// Exclude domains</div>
+          <div class="pop-hint" style="margin-bottom:6px">Wildcard patterns: *.google.com, mail.*, etc.</div>
+          <div class="exclude-list" id="excludeList"></div>
+          <div class="exclude-add">
+            <input type="text" id="excludeInput" class="pop-input exclude-input" placeholder="e.g. *.google.com">
+            <button id="excludeAdd" class="exclude-add-btn">+</button>
+          </div>
         </div>
       </div>
 

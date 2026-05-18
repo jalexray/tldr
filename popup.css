@@ -463,6 +463,76 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* ── Exclude list ── */
+.exclude-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.exclude-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border: 1px solid var(--fg4);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--fg2);
+  letter-spacing: 0.04em;
+}
+
+.exclude-remove {
+  background: none;
+  border: none;
+  color: var(--warn);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 0 0 8px;
+  letter-spacing: 0.1em;
+}
+
+.exclude-remove:hover { color: #fff; }
+
+.exclude-add {
+  display: flex;
+  gap: 6px;
+}
+
+.exclude-input {
+  flex: 1;
+}
+
+.exclude-add-btn {
+  width: 36px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--haz);
+  background: transparent;
+  color: var(--haz);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-radius: 0;
+}
+
+.exclude-add-btn:hover {
+  background: var(--haz);
+  color: #000;
+}
+
+.exclude-empty {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--fg3);
+  letter-spacing: 0.08em;
+  padding: 4px 0;
+}
+
 /* ── Save settings button ── */
 .pop-save-btn {
   display: block;

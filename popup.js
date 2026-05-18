@@ -74,7 +74,7 @@ function lookupBook(words) {
 
 chrome.storage.local.get(
   ['provider', 'apiKey', 'model', 'baseUrl', 'displayMode',
-   'densityMode', 'densityLevel', 'autoRun', 'lifetimeWordsCut'],
+   'densityMode', 'densityLevel', 'autoRun', 'lifetimeWordsCut', 'excludePatterns'],
   async (s) => {
     // Show intro if no API key is set
     if (!s.apiKey) {
@@ -89,7 +89,9 @@ chrome.storage.local.get(
     // Auto-run: sync with actual permission state
     const hasAllUrls = await chrome.permissions.contains({ origins: ['<all_urls>'] });
     $('#autoRun').checked = !!s.autoRun && hasAllUrls;
+    excludePatterns = s.excludePatterns || [];
     syncAutoRunUI();
+    renderExcludeList();
 
     if (s.displayMode) setDisplayMode(s.displayMode);
     if (s.provider) $('#provider').value = s.provider;
@@ -259,11 +261,64 @@ function getDisplayMode() {
   return active ? active.dataset.value : 'overlay';
 }
 
+let excludePatterns = [];
+
 function syncAutoRunUI() {
   const checked = $('#autoRun').checked;
   $('#autoRunBox').classList.toggle('checked', checked);
   $('#autoRunBox').textContent = checked ? '\u00d7' : '';
   $('#autoRunWarning').classList.toggle('hidden', !checked);
+  $('#excludeSection').classList.toggle('hidden', !checked);
+}
+
+function renderExcludeList() {
+  const list = $('#excludeList');
+  list.innerHTML = '';
+
+  if (excludePatterns.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'exclude-empty';
+    empty.textContent = '// no exclusions';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (let i = 0; i < excludePatterns.length; i++) {
+    const item = document.createElement('div');
+    item.className = 'exclude-item';
+
+    const text = document.createElement('span');
+    text.textContent = excludePatterns[i];
+
+    const btn = document.createElement('button');
+    btn.className = 'exclude-remove';
+    btn.textContent = '\u00d7';
+    btn.addEventListener('click', () => {
+      excludePatterns.splice(i, 1);
+      saveExcludePatterns();
+      renderExcludeList();
+    });
+
+    item.appendChild(text);
+    item.appendChild(btn);
+    list.appendChild(item);
+  }
+}
+
+function addExcludePattern() {
+  const input = $('#excludeInput');
+  const pattern = input.value.trim().toLowerCase();
+  if (!pattern) return;
+  if (excludePatterns.includes(pattern)) { input.value = ''; return; }
+
+  excludePatterns.push(pattern);
+  saveExcludePatterns();
+  renderExcludeList();
+  input.value = '';
+}
+
+function saveExcludePatterns() {
+  chrome.storage.local.set({ excludePatterns });
 }
 
 function renderScore(words) {
@@ -336,6 +391,11 @@ $('#saveSettings').addEventListener('click', () => {
   $('#settings').classList.add('hidden');
   $('#settings-toggle').textContent = '+ Settings';
   showStatus('// SETTINGS SAVED', 'saved');
+});
+
+$('#excludeAdd').addEventListener('click', addExcludePattern);
+$('#excludeInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addExcludePattern();
 });
 
 $('#provider').addEventListener('change', () => {

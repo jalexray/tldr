@@ -172,6 +172,17 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 // =============================================
+//  PATTERN MATCHING FOR EXCLUDE LIST
+// =============================================
+
+// Converts a wildcard pattern like "*.google.com" to a regex
+// Supports * as a wildcard for any sequence of characters
+function matchPattern(hostname, pattern) {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp('^' + escaped + '$', 'i').test(hostname);
+}
+
+// =============================================
 //  AUTO-RUN ON PAGE LOAD
 // =============================================
 
@@ -183,8 +194,18 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     return;
   }
 
-  const { autoRun, apiKey } = await chrome.storage.local.get(['autoRun', 'apiKey']);
+  const { autoRun, apiKey, excludePatterns } = await chrome.storage.local.get(
+    ['autoRun', 'apiKey', 'excludePatterns']
+  );
   if (!autoRun || !apiKey) return;
+
+  // Check exclude patterns
+  if (excludePatterns && excludePatterns.length > 0) {
+    try {
+      const hostname = new URL(tab.url).hostname;
+      if (excludePatterns.some(p => matchPattern(hostname, p))) return;
+    } catch {}
+  }
 
   try {
     await injectContentScript(tabId);
