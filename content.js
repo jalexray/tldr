@@ -606,7 +606,11 @@
   }
 
   // Re-attaches links from the original paragraph to the condensed text.
-  // If the LLM preserved a link's text, it gets re-linked. If not, plain text.
+  // Matching strategy (in order):
+  //   1. Exact match of link text
+  //   2. Case-insensitive match of link text
+  //   3. Longest significant word (5+ chars) from link text, whole-word match
+  // If nothing matches, the link is dropped gracefully.
   function setTextWithLinks(element, text, links) {
     element.innerHTML = '';
 
@@ -615,12 +619,11 @@
       return;
     }
 
-    // Find where each link's text appears in the condensed output
     const matches = [];
     for (const link of links) {
-      const idx = text.indexOf(link.text);
-      if (idx !== -1) {
-        matches.push({ start: idx, end: idx + link.text.length, href: link.href, text: link.text });
+      const found = findLinkInText(text, link.text, matches);
+      if (found) {
+        matches.push({ start: found.start, end: found.end, href: link.href, text: found.matched });
       }
     }
 
@@ -657,6 +660,38 @@
     if (pos < text.length) {
       element.appendChild(document.createTextNode(text.slice(pos)));
     }
+  }
+
+  function findLinkInText(text, linkText, existing) {
+    // 1. Exact match
+    let idx = text.indexOf(linkText);
+    if (idx !== -1 && !overlaps(idx, idx + linkText.length, existing)) {
+      return { start: idx, end: idx + linkText.length, matched: text.slice(idx, idx + linkText.length) };
+    }
+
+    // 2. Case-insensitive match
+    const lower = text.toLowerCase();
+    idx = lower.indexOf(linkText.toLowerCase());
+    if (idx !== -1 && !overlaps(idx, idx + linkText.length, existing)) {
+      return { start: idx, end: idx + linkText.length, matched: text.slice(idx, idx + linkText.length) };
+    }
+
+    // 3. Longest significant word from link text (5+ chars), whole-word match
+    const words = linkText.split(/\s+/).filter(w => w.length >= 5);
+    words.sort((a, b) => b.length - a.length); // longest first
+    for (const word of words) {
+      const wordRe = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+      const m = wordRe.exec(text);
+      if (m && !overlaps(m.index, m.index + m[0].length, existing)) {
+        return { start: m.index, end: m.index + m[0].length, matched: m[0] };
+      }
+    }
+
+    return null;
+  }
+
+  function overlaps(start, end, existing) {
+    return existing.some(m => start < m.end && end > m.start);
   }
 
   // =============================================
