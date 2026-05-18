@@ -582,7 +582,7 @@
   ]);
 
   const SKIP_PATTERN =
-    /nav|menu|sidebar|footer|header|comment|share|social|related|ad[-_]|ads[-_]|advertisement|signup|subscribe|newsletter|cookie|banner|popup|modal|breadcrumb|pagination|toc|table-of-contents/i;
+    /nav|menu|sidebar|footer|header|share|social|related|ad[-_]|ads[-_]|advertisement|signup|subscribe|newsletter|cookie|banner|popup|modal|breadcrumb|pagination|toc|table-of-contents/i;
 
   function shouldSkip(el) {
     if (SKIP_TAGS.has(el.tagName)) return true;
