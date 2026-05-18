@@ -308,7 +308,7 @@ async function callOpenAI(settings, systemPrompt, userPrompt) {
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.2,
-      max_tokens: 4096
+      max_tokens: 16384
     })
   });
 
@@ -334,7 +334,7 @@ async function callAnthropic(settings, systemPrompt, userPrompt) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 4096,
+      max_tokens: 16384,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
       temperature: 0.2
