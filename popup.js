@@ -2,6 +2,8 @@
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+const isMac = navigator.platform.includes('Mac') || navigator.userAgent.includes('Mac');
+const SHORTCUT = isMac ? '\u2325T' : 'ALT+T';
 
 // ── Constants ──
 
@@ -82,6 +84,7 @@ chrome.storage.local.get(
     }
 
     showView('main');
+    $('#status').textContent = `// ${SHORTCUT} TO TRIGGER`;
 
     // Auto-run: sync with actual permission state
     const hasAllUrls = await chrome.permissions.contains({ origins: ['<all_urls>'] });
@@ -308,7 +311,7 @@ function showStatus(msg, type) {
   el.className = 'pop-status' + (type === 'error' ? ' error' : type === 'saved' ? ' saved' : '');
   if (type) {
     setTimeout(() => {
-      el.textContent = '// ALT+T TO TRIGGER';
+      el.textContent = '// ${SHORTCUT} TO TRIGGER';
       el.className = 'pop-status';
     }, 3000);
   }
