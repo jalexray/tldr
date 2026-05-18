@@ -8,7 +8,48 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="pop">
+  <!-- FIRST RUN / INTRO -->
+  <div class="pop intro" id="introView">
+    <div class="pop-wordmark" style="font-size:52px">TLDR<span class="haz-dot">.</span></div>
+    <div class="intro-headline">READ LESS<span class="haz-dot">.</span></div>
+
+    <div class="intro-tenets">
+      <div class="intro-tenet">
+        <span class="intro-num">01</span>
+        <span>Most of the web is slop.</span>
+      </div>
+      <div class="intro-tenet">
+        <span class="intro-num">02</span>
+        <span>You don't have time for it.</span>
+      </div>
+      <div class="intro-tenet">
+        <span class="intro-num">03</span>
+        <span>We cut it. Ruthlessly.</span>
+      </div>
+    </div>
+
+    <div class="pop-label" style="margin-top:18px">// Setup</div>
+
+    <div class="intro-providers">
+      <button class="intro-provider" data-value="openai">OpenAI</button>
+      <button class="intro-provider active" data-value="anthropic">Anthropic</button>
+      <button class="intro-provider" data-value="custom">Custom</button>
+    </div>
+
+    <input type="password" id="introApiKey" class="pop-input intro-key" placeholder="sk-...">
+    <div class="pop-hint">// stored locally · never leaves your browser</div>
+
+    <button id="introStart" class="pop-cta intro-cta" disabled>I agree · Start cutting</button>
+
+    <div class="pop-footer">
+      By continuing you accept: Void where prohibited ·
+      For entertainment purposes only · Not responsible
+      for information you miss
+    </div>
+  </div>
+
+  <!-- MAIN VIEW -->
+  <div class="pop hidden" id="mainView">
     <!-- Header -->
     <div class="pop-header">
       <div class="pop-wordmark">TLDR<span class="haz-dot">.</span></div>
@@ -102,7 +143,7 @@
       Void where prohibited · For entertainment purposes only<br>
       Not responsible for information you miss
     </div>
-  </div>
+  </div><!-- /mainView -->
 
   <script src="popup.js"></script>
 </body>

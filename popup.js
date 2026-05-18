@@ -74,6 +74,15 @@ chrome.storage.local.get(
   ['provider', 'apiKey', 'model', 'baseUrl', 'displayMode',
    'densityMode', 'densityLevel', 'autoRun', 'lifetimeWordsCut'],
   async (s) => {
+    // Show intro if no API key is set
+    if (!s.apiKey) {
+      showView('intro');
+      initIntro();
+      return;
+    }
+
+    showView('main');
+
     // Auto-run: sync with actual permission state
     const hasAllUrls = await chrome.permissions.contains({ origins: ['<all_urls>'] });
     $('#autoRun').checked = !!s.autoRun && hasAllUrls;
@@ -106,6 +115,58 @@ chrome.storage.local.get(
     renderScore(s.lifetimeWordsCut || 0);
   }
 );
+
+// ── Intro / first-run ──
+
+function showView(name) {
+  $('#introView').classList.toggle('hidden', name !== 'intro');
+  $('#mainView').classList.toggle('hidden', name !== 'main');
+}
+
+function initIntro() {
+  let selectedProvider = 'anthropic';
+
+  // Provider buttons
+  $$('.intro-provider').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.intro-provider').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedProvider = btn.dataset.value;
+    });
+  });
+
+  // Enable CTA when key is entered
+  const keyInput = $('#introApiKey');
+  const startBtn = $('#introStart');
+
+  keyInput.addEventListener('input', () => {
+    startBtn.disabled = !keyInput.value.trim();
+  });
+
+  startBtn.addEventListener('click', async () => {
+    const apiKey = keyInput.value.trim();
+    if (!apiKey) return;
+
+    // Determine default model for provider
+    const defaultModels = {
+      openai: 'gpt-4o-mini',
+      anthropic: 'claude-haiku-4-5-20251001',
+      custom: ''
+    };
+
+    await chrome.storage.local.set({
+      provider: selectedProvider,
+      apiKey,
+      model: defaultModels[selectedProvider] || '',
+      displayMode: 'overlay',
+      densityMode: 'smart',
+      densityLevel: 3
+    });
+
+    // Reload popup to show main view with saved settings
+    location.reload();
+  });
+}
 
 // ── UI rendering ──
 

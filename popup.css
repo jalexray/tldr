@@ -463,6 +463,83 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* ── Intro / first-run ── */
+.intro-headline {
+  font-family: 'Anton', 'Archivo Black', sans-serif;
+  font-size: 42px;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+.intro-tenets {
+  margin-top: 20px;
+}
+
+.intro-tenet {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--fg4);
+  font-size: 15px;
+}
+
+.intro-tenet:first-child {
+  border-top: 1px solid var(--fg4);
+}
+
+.intro-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--haz);
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+}
+
+.intro-providers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1.5px solid var(--fg3);
+  margin-top: 8px;
+}
+
+.intro-provider {
+  padding: 10px 6px;
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.intro-provider + .intro-provider {
+  border-left: 1.5px solid var(--fg3);
+}
+
+.intro-provider.active {
+  background: var(--haz);
+  color: #000;
+  font-weight: 700;
+}
+
+.intro-key {
+  margin-top: 10px;
+  border-color: var(--haz);
+}
+
+.intro-cta {
+  margin-top: 14px;
+}
+
 /* ── Footer ── */
 .pop-footer {
   margin-top: 14px;
