@@ -79,7 +79,7 @@
     const settings = await chrome.storage.local.get([
       'displayMode', 'densityMode', 'densityLevel'
     ]);
-    currentMode = settings.displayMode || 'overlay';
+    currentMode = settings.displayMode || 'inline';
     currentDensity = {
       mode: settings.densityMode || 'smart',
       level: parseInt(settings.densityLevel) || 3

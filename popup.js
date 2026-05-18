@@ -158,7 +158,7 @@ function initIntro() {
       provider: selectedProvider,
       apiKey,
       model: defaultModels[selectedProvider] || '',
-      displayMode: 'overlay',
+      displayMode: 'inline',
       densityMode: 'smart',
       densityLevel: 3
     });
