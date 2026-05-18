@@ -175,11 +175,23 @@ chrome.commands.onCommand.addListener(async (command) => {
 //  PATTERN MATCHING FOR EXCLUDE LIST
 // =============================================
 
-// Converts a wildcard pattern like "*.google.com" to a regex
-// Supports * as a wildcard for any sequence of characters
+// Matches a hostname against a wildcard pattern.
+// "*.google.com" matches "mail.google.com", "docs.google.com", etc.
+// "example.com" also matches "www.example.com" (and vice versa).
 function matchPattern(hostname, pattern) {
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
-  return new RegExp('^' + escaped + '$', 'i').test(hostname);
+  const re = new RegExp('^' + escaped + '$', 'i');
+
+  if (re.test(hostname)) return true;
+
+  // Also try with/without www. prefix so "example.com" catches "www.example.com"
+  if (hostname.startsWith('www.')) {
+    if (re.test(hostname.slice(4))) return true;
+  } else {
+    if (re.test('www.' + hostname)) return true;
+  }
+
+  return false;
 }
 
 // =============================================
