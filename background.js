@@ -141,6 +141,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     );
     sendResponse({ ok: true });
   }
+  if (message.action === 'openSettings') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
+    sendResponse({ ok: true });
+  }
   return true;
 });
 
