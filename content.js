@@ -323,23 +323,26 @@
 
   function collectParagraphs(root) {
     const results = [];
-    const allP = root.querySelectorAll('p');
 
-    for (const p of allP) {
-      if (isInsideSkippable(p, root)) continue;
-      const text = p.innerText.trim();
-      if (text.length < 40) continue;
+    for (const el of root.querySelectorAll('p, li')) {
+      if (isInsideSkippable(el, root)) continue;
+
+      // Skip <li> elements that contain nested lists (avoid double-counting)
+      if (el.tagName === 'LI' && el.querySelector('ul, ol')) continue;
+
+      const text = el.innerText.trim();
+      if (text.length < 30) continue;
 
       // Collect links for re-attachment after condensation
       const links = [];
-      for (const a of p.querySelectorAll('a[href]')) {
+      for (const a of el.querySelectorAll('a[href]')) {
         const linkText = a.textContent.trim();
         if (linkText.length > 0) {
           links.push({ text: linkText, href: a.href });
         }
       }
 
-      results.push({ element: p, text, links });
+      results.push({ element: el, text, links });
     }
 
     return results;
