@@ -231,6 +231,23 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 // =============================================
+//  CHUNKING FOR PARALLEL INLINE PROCESSING
+// =============================================
+
+// Splits numbered paragraph text into chunks of maxPerChunk entries.
+// Preserves original numbering so responses can be merged directly.
+function splitInlineChunks(content, maxPerChunk) {
+  const entries = content.split('\n\n').filter(s => s.trim());
+  if (entries.length <= maxPerChunk) return [content];
+
+  const chunks = [];
+  for (let i = 0; i < entries.length; i += maxPerChunk) {
+    chunks.push(entries.slice(i, i + maxPerChunk).join('\n\n'));
+  }
+  return chunks;
+}
+
+// =============================================
 //  LLM CALLS
 // =============================================
 
@@ -247,18 +264,30 @@ async function handleCondense(tabId, content, title, wordCount, mode, densityMod
     return;
   }
 
-  const systemPrompt =
-    mode === 'inline'
-      ? buildInlinePrompt(densityMode, densityLevel)
-      : buildOverlayPrompt(densityMode, densityLevel);
-
-  const userPrompt =
-    mode === 'inline'
-      ? `Paragraphs:\n\n${content}`
-      : `Page title: ${title}\n\nContent:\n${content}`;
-
   try {
-    const result = await callLLM(settings, systemPrompt, userPrompt);
+    let result;
+
+    if (mode === 'inline') {
+      // Split into chunks and process in parallel for speed
+      const systemPrompt = buildInlinePrompt(densityMode, densityLevel);
+      const chunks = splitInlineChunks(content, 15);
+
+      if (chunks.length === 1) {
+        result = await callLLM(settings, systemPrompt, `Paragraphs:\n\n${chunks[0]}`);
+      } else {
+        const results = await Promise.all(
+          chunks.map(chunk =>
+            callLLM(settings, systemPrompt, `Paragraphs:\n\n${chunk}`)
+          )
+        );
+        result = results.join('\n');
+      }
+    } else {
+      const systemPrompt = buildOverlayPrompt(densityMode, densityLevel);
+      const userPrompt = `Page title: ${title}\n\nContent:\n${content}`;
+      result = await callLLM(settings, systemPrompt, userPrompt);
+    }
+
     chrome.tabs.sendMessage(tabId, {
       action: 'result',
       markdown: result,
