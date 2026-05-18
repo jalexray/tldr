@@ -331,6 +331,13 @@ $('#settings-toggle').addEventListener('click', () => {
   btn.textContent = isHidden ? '+ Settings' : '\u2212 Settings';
 });
 
+$('#saveSettings').addEventListener('click', () => {
+  chrome.storage.local.set(getAllSettings());
+  $('#settings').classList.add('hidden');
+  $('#settings-toggle').textContent = '+ Settings';
+  showStatus('// SETTINGS SAVED', 'saved');
+});
+
 $('#provider').addEventListener('change', () => {
   populateModels();
   syncUI();

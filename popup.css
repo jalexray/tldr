@@ -463,6 +463,31 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* ── Save settings button ── */
+.pop-save-btn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px;
+  border: 1.5px solid var(--fg);
+  background: transparent;
+  color: var(--fg);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  border-radius: 0;
+}
+
+.pop-save-btn:hover {
+  background: var(--haz);
+  color: #000;
+  border-color: var(--haz);
+}
+
 /* ── Intro / first-run ── */
 .intro-headline {
   font-family: 'Anton', 'Archivo Black', sans-serif;
