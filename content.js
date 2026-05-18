@@ -598,7 +598,7 @@
   ]);
 
   const SKIP_PATTERN =
-    /nav|menu|sidebar|footer|header|share|social|related|ad[-_]|ads[-_]|advertisement|signup|subscribe|newsletter|cookie|banner|popup|modal|breadcrumb|pagination|toc|table-of-contents/i;
+    /\b(nav|menu|sidebar|footer|header|share|social|related|advertisement|cookie|banner|breadcrumb|pagination|toc|table-of-contents)\b/i;
 
   function shouldSkip(el) {
     if (SKIP_TAGS.has(el.tagName)) return true;
