@@ -1,6 +1,9 @@
-// TLDR — Popup script
+// TLDR — Popup script · MSCHF direction
 
 const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+// ── Constants ──
 
 const PROVIDER_MODELS = {
   openai: [
@@ -11,36 +14,72 @@ const PROVIDER_MODELS = {
     { value: 'other', label: 'Other...' }
   ],
   anthropic: [
-    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-    { value: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5' },
-    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+    { value: 'claude-sonnet-4-5-20250514', label: 'Sonnet 4.5' },
+    { value: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
     { value: 'other', label: 'Other...' }
   ],
   custom: [
-    { value: 'other', label: 'Enter model ID...' }
+    { value: 'other', label: 'Other...' }
   ]
 };
 
-const DENSITY_DESCS = [
-  '',
-  'Light (~20% reduction)',
-  'Moderate (~35% reduction)',
-  'Balanced (~50% reduction)',
-  'Aggressive (~65% reduction)',
-  'Exec summary (~80% reduction)'
+const DENSITY_STEPS = [
+  { id: 1, label: 'FLUFF',      note: 'Light edit \u00b7 keep voice',   pct: 20 },
+  { id: 2, label: 'TRIM',       note: 'Drop hedging & redundancy',      pct: 35 },
+  { id: 3, label: 'CRUNCH',     note: 'Default \u00b7 half-length',     pct: 50 },
+  { id: 4, label: 'CULL',       note: 'Key points only',                pct: 65 },
+  { id: 5, label: 'BARE BONES', note: '\u226415 words per bullet',      pct: 80 },
 ];
+
+const BOOK_LADDER = [
+  { min: 0,       title: 'silence',                   note: 'nothing cut yet' },
+  { min: 1,       title: 'a haiku',                   note: '~17 syllables' },
+  { min: 50,      title: 'a tweet',                   note: '~50 words' },
+  { min: 250,     title: 'a Wikipedia stub',          note: '~250 words' },
+  { min: 700,     title: 'a blog post',               note: '~700 words' },
+  { min: 1500,    title: 'a New Yorker shortie',      note: '~1,500 words' },
+  { min: 3000,    title: 'a TED talk transcript',     note: '~3,000 words' },
+  { min: 7500,    title: 'a magazine longread',       note: '~7,500 words' },
+  { min: 15000,   title: 'a novella chapter',         note: '~15,000 words' },
+  { min: 27000,   title: '"The Old Man and the Sea"', note: 'Hemingway \u00b7 26,601' },
+  { min: 30000,   title: '"Animal Farm"',             note: 'Orwell \u00b7 29,966' },
+  { min: 47000,   title: '"The Great Gatsby"',        note: 'Fitzgerald \u00b7 47,094' },
+  { min: 60000,   title: '"Brave New World"',         note: 'Huxley \u00b7 63,766' },
+  { min: 73000,   title: '"The Catcher in the Rye"',  note: 'Salinger \u00b7 73,404' },
+  { min: 89000,   title: '"1984"',                    note: 'Orwell \u00b7 88,942' },
+  { min: 99000,   title: '"To Kill a Mockingbird"',   note: 'Lee \u00b7 99,121' },
+  { min: 122000,  title: '"Pride and Prejudice"',     note: 'Austen \u00b7 122,189' },
+  { min: 135000,  title: '"A Tale of Two Cities"',    note: 'Dickens \u00b7 135,420' },
+  { min: 209000,  title: '"Moby-Dick"',               note: 'Melville \u00b7 209,117' },
+  { min: 349000,  title: '"Anna Karenina"',           note: 'Tolstoy \u00b7 349,168' },
+  { min: 530000,  title: '"Les Mis\u00e9rables"',     note: 'Hugo \u00b7 530,982' },
+  { min: 543000,  title: '"Infinite Jest"',           note: 'Wallace \u00b7 543,709' },
+  { min: 587000,  title: '"War and Peace"',           note: 'Tolstoy \u00b7 587,287' },
+  { min: 1267000, title: '"In Search of Lost Time"',  note: 'Proust \u00b7 1,267,069' },
+];
+
+function lookupBook(words) {
+  let match = BOOK_LADDER[0];
+  for (const step of BOOK_LADDER) {
+    if (words >= step.min) match = step;
+    else break;
+  }
+  return match;
+}
 
 // ── Load saved settings ──
 
 chrome.storage.local.get(
-  ['provider', 'apiKey', 'model', 'baseUrl', 'displayMode', 'densityMode', 'densityLevel', 'autoRun'],
+  ['provider', 'apiKey', 'model', 'baseUrl', 'displayMode',
+   'densityMode', 'densityLevel', 'autoRun', 'lifetimeWordsCut'],
   async (s) => {
-    // Sync auto-run checkbox with actual permission state
+    // Auto-run: sync with actual permission state
     const hasAllUrls = await chrome.permissions.contains({ origins: ['<all_urls>'] });
     $('#autoRun').checked = !!s.autoRun && hasAllUrls;
-    $('#autoRunWarning').classList.toggle('hidden', !$('#autoRun').checked);
+    syncAutoRunUI();
 
-    if (s.displayMode) $('#displayMode').value = s.displayMode;
+    if (s.displayMode) setDisplayMode(s.displayMode);
     if (s.provider) $('#provider').value = s.provider;
     if (s.apiKey) $('#apiKey').value = s.apiKey;
     if (s.baseUrl) $('#baseUrl').value = s.baseUrl;
@@ -54,7 +93,7 @@ chrome.storage.local.get(
 
     if (s.model) {
       const select = $('#model');
-      const presets = Array.from(select.options).map((o) => o.value);
+      const presets = Array.from(select.options).map(o => o.value);
       if (presets.includes(s.model)) {
         select.value = s.model;
       } else {
@@ -64,10 +103,11 @@ chrome.storage.local.get(
     }
 
     syncUI();
+    renderScore(s.lifetimeWordsCut || 0);
   }
 );
 
-// ── UI helpers ──
+// ── UI rendering ──
 
 function populateModels() {
   const provider = $('#provider').value;
@@ -86,26 +126,112 @@ function syncUI() {
   const provider = $('#provider').value;
   $('#baseUrlGroup').classList.toggle('hidden', provider !== 'custom');
   $('#customModelGroup').classList.toggle('hidden', $('#model').value !== 'other');
+  renderDensity();
+}
 
-  const isSmart = $('#densitySmart').checked;
-  $('#densitySliderGroup').classList.toggle('hidden', isSmart);
-  if (!isSmart) {
-    $('#densityDesc').textContent = DENSITY_DESCS[$('#densityLevel').value];
+function renderDensity() {
+  const smart = $('#densitySmart').checked;
+  const level = parseInt($('#densityLevel').value);
+  const current = DENSITY_STEPS[level - 1];
+
+  // Smart toggle styling
+  const smartLabel = $('#smartLabel');
+  const smartBox = $('#smartBox');
+  smartLabel.classList.toggle('active', smart);
+  smartBox.classList.toggle('checked', smart);
+
+  // Slider
+  $('#densityLevel').classList.toggle('dimmed', smart);
+
+  // Ticks
+  const ticksEl = $('#densityTicks');
+  ticksEl.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const tick = document.createElement('div');
+    tick.className = 'pop-tick';
+    if (!smart && level === i) tick.classList.add('active');
+    else if (!smart && i <= level) tick.classList.add('filled');
+    ticksEl.appendChild(tick);
   }
+
+  // Step labels
+  const labelsEl = $('#stepLabels');
+  labelsEl.innerHTML = '';
+  labelsEl.classList.toggle('dimmed', smart);
+  for (const step of DENSITY_STEPS) {
+    const btn = document.createElement('button');
+    btn.className = 'pop-step-label';
+    if (!smart && level === step.id) btn.classList.add('active');
+    btn.textContent = step.label;
+    btn.addEventListener('click', () => {
+      $('#densitySmart').checked = false;
+      $('#densityLevel').value = step.id;
+      renderDensity();
+      flashSaved();
+    });
+    labelsEl.appendChild(btn);
+  }
+
+  // Readout
+  const readout = $('#stepReadout');
+  readout.classList.toggle('active', !smart);
+  readout.innerHTML = `
+    <div>
+      <div class="pop-readout-name" style="color:${smart ? '#9a9a9a' : '#fff'}">${smart ? 'Auto' : current.label}</div>
+      <div class="pop-readout-note">${smart ? 'Model decides per-paragraph' : current.note}</div>
+    </div>
+    <div class="pop-readout-pct" style="color:${smart ? '#9a9a9a' : ''}">${smart ? 'AUTO' : '\u2212' + current.pct + '%'}</div>
+  `;
+}
+
+function setDisplayMode(mode) {
+  $$('.seg-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === mode);
+  });
+}
+
+function getDisplayMode() {
+  const active = document.querySelector('.seg-btn.active');
+  return active ? active.dataset.value : 'overlay';
+}
+
+function syncAutoRunUI() {
+  const checked = $('#autoRun').checked;
+  $('#autoRunBox').classList.toggle('checked', checked);
+  $('#autoRunBox').textContent = checked ? '\u00d7' : '';
+  $('#autoRunWarning').classList.toggle('hidden', !checked);
+}
+
+function renderScore(words) {
+  const book = lookupBook(words);
+  const panel = $('#scorePanel');
+  const titleHtml = book.title.replace(/"([^"]+)"/, '<em>$1</em>');
+
+  panel.innerHTML = `
+    <div class="score-label">
+      <span>// LIFETIME SLOP CUT</span>
+      ${words > 0 ? '<span style="color:#555">SINCE INSTALL</span>' : ''}
+    </div>
+    <div class="score-number">${words.toLocaleString()}<span class="unit">words</span></div>
+    <div class="score-book">
+      <span class="score-approx">\u2248</span>
+      <div>
+        <div class="score-title">${titleHtml}</div>
+        <div class="score-note">${book.note}</div>
+      </div>
+    </div>
+  `;
 }
 
 function getEffectiveModel() {
   const sel = $('#model').value;
-  if (sel === 'other') {
-    return $('#customModel').value.trim();
-  }
-  return sel;
+  return sel === 'other' ? $('#customModel').value.trim() : sel;
 }
 
 function getAllSettings() {
   return {
     autoRun: $('#autoRun').checked,
-    displayMode: $('#displayMode').value,
+    displayMode: getDisplayMode(),
     provider: $('#provider').value,
     apiKey: $('#apiKey').value.trim(),
     model: getEffectiveModel(),
@@ -115,71 +241,72 @@ function getAllSettings() {
   };
 }
 
-function showStatus(msg, isError) {
+function showStatus(msg, type) {
   const el = $('#status');
   el.textContent = msg;
-  el.className = 'status' + (isError ? ' error' : '');
-  setTimeout(() => {
-    el.textContent = '';
-    el.className = 'status';
-  }, 4000);
+  el.className = 'pop-status' + (type === 'error' ? ' error' : type === 'saved' ? ' saved' : '');
+  if (type) {
+    setTimeout(() => {
+      el.textContent = '// ALT+T TO TRIGGER';
+      el.className = 'pop-status';
+    }, 3000);
+  }
+}
+
+function flashSaved() {
+  showStatus('// SETTINGS SAVED', 'saved');
 }
 
 // ── Events ──
 
 $('#settings-toggle').addEventListener('click', () => {
-  $('#settings').classList.toggle('hidden');
+  const panel = $('#settings');
+  const btn = $('#settings-toggle');
+  const isHidden = panel.classList.toggle('hidden');
+  btn.textContent = isHidden ? '+ Settings' : '\u2212 Settings';
 });
 
 $('#provider').addEventListener('change', () => {
   populateModels();
   syncUI();
+  flashSaved();
 });
 
-$('#model').addEventListener('change', syncUI);
-$('#densitySmart').addEventListener('change', syncUI);
+$('#model').addEventListener('change', () => { syncUI(); flashSaved(); });
 
-$('#autoRun').addEventListener('change', async () => {
-  if ($('#autoRun').checked) {
-    const granted = await chrome.permissions.request({
-      origins: ['<all_urls>']
-    });
-    if (!granted) {
-      $('#autoRun').checked = false;
-    }
-  } else {
-    await chrome.permissions.remove({ origins: ['<all_urls>'] });
-  }
-  $('#autoRunWarning').classList.toggle('hidden', !$('#autoRun').checked);
-});
-$('#densityLevel').addEventListener('input', () => {
-  $('#densityDesc').textContent = DENSITY_DESCS[$('#densityLevel').value];
-});
+$('#densitySmart').addEventListener('change', () => { renderDensity(); flashSaved(); });
 
-$('#save').addEventListener('click', () => {
-  const settings = getAllSettings();
+$('#densityLevel').addEventListener('input', () => { renderDensity(); flashSaved(); });
 
-  if (!settings.apiKey) {
-    showStatus('Please enter an API key.', true);
-    return;
-  }
-  if ($('#model').value === 'other' && !settings.model) {
-    showStatus('Please enter a model ID.', true);
-    return;
-  }
-
-  chrome.storage.local.set(settings, () => {
-    const el = $('#saved');
-    el.classList.remove('hidden');
-    setTimeout(() => el.classList.add('hidden'), 2000);
+// Segmented control
+$$('.seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setDisplayMode(btn.dataset.value);
+    flashSaved();
   });
 });
 
+// Auto-run with permission request
+$('#autoRun').addEventListener('change', async () => {
+  if ($('#autoRun').checked) {
+    const granted = await chrome.permissions.request({ origins: ['<all_urls>'] });
+    if (!granted) $('#autoRun').checked = false;
+  } else {
+    await chrome.permissions.remove({ origins: ['<all_urls>'] });
+  }
+  syncAutoRunUI();
+  flashSaved();
+});
+
+// Save button (implicit — settings auto-save on condense and on field blur)
+$('#apiKey').addEventListener('blur', flashSaved);
+
+// Condense
 $('#condense').addEventListener('click', async () => {
   const settings = getAllSettings();
 
   if (!settings.apiKey) {
-    showStatus('Set up your API key first.', true);
+    showStatus('\u00d7 NO API KEY', 'error');
     return;
   }
 
@@ -187,19 +314,11 @@ $('#condense').addEventListener('click', async () => {
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-    await chrome.scripting.insertCSS({
-      target: { tabId: tab.id },
-      files: ['content.css']
-    });
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['content.js']
-    });
-
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
     await chrome.tabs.sendMessage(tab.id, { action: 'trigger' });
     window.close();
   } catch {
-    showStatus('Cannot reach page. Try reloading it first.', true);
+    showStatus('\u00d7 CANNOT REACH PAGE', 'error');
   }
 });

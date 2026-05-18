@@ -1,19 +1,21 @@
-/* TLDR — Overlay styles (injected into every page, scoped to #tldr-overlay) */
+/* TLDR — Content styles · MSCHF direction */
+/* Overlay + inline bar injected into host pages */
+
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+/* ── Overlay ── */
 
 #tldr-overlay {
   all: initial;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 2147483647;
-  background: #fff;
-  color: #1a1a1a;
+  background: #0a0a0a;
+  color: #fff;
   overflow-y: auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.55;
   animation: tldr-fadein 0.15s ease;
 }
 
@@ -24,91 +26,205 @@
 
 /* Container */
 #tldr-overlay .tldr-container {
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: 0 1.5rem 4rem;
 }
 
-/* Header */
+/* Sticky header */
 #tldr-overlay .tldr-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e5e5e5;
   position: sticky;
   top: 0;
-  background: #fff;
-  z-index: 1;
-  padding-top: 1rem;
+  background: #0a0a0a;
+  z-index: 2;
+  padding: 24px 0 14px;
 }
 
-#tldr-overlay .tldr-header-left {
+#tldr-overlay .tldr-header-top {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+#tldr-overlay .tldr-wordmark {
+  font-family: 'Anton', 'Archivo Black', sans-serif;
+  font-size: 56px;
+  line-height: 0.88;
+  letter-spacing: -0.012em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+#tldr-overlay .tldr-haz-dot { color: #E5FF00; }
+
+#tldr-overlay .tldr-stamps {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
-#tldr-overlay .tldr-logo {
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: #000;
-}
-
-#tldr-overlay .tldr-stats {
-  font-size: 0.8rem;
-  color: #888;
-}
-
-#tldr-overlay .tldr-stats strong {
-  color: #16a34a;
+#tldr-overlay .tldr-stamp {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
   font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 8px 3px;
+  border: 1.5px solid currentColor;
+  white-space: nowrap;
+}
+
+#tldr-overlay .tldr-stamp-hazard {
+  color: #000;
+  background: #E5FF00;
+  border-color: #E5FF00;
+}
+
+#tldr-overlay .tldr-stamp-outline {
+  color: #fff;
+  border-color: #fff;
+}
+
+#tldr-overlay .tldr-stamp-extracting {
+  color: #fff;
+  border-color: #fff;
 }
 
 #tldr-overlay .tldr-close {
   all: unset;
   cursor: pointer;
-  font-size: 0.82rem;
-  color: #666;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 6px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #fff;
+  border: 1.5px solid #fff;
+  padding: 8px 12px;
   white-space: nowrap;
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.12s;
 }
 
 #tldr-overlay .tldr-close:hover {
-  background: #f5f5f5;
-  color: #222;
+  background: #E5FF00;
+  color: #000;
+  border-color: #E5FF00;
 }
 
-/* Content */
+/* Hazard stripe */
+#tldr-overlay .tldr-hazard-stripe {
+  height: 8px;
+  background: repeating-linear-gradient(-45deg, #E5FF00 0 8px, #000 8px 16px);
+}
+
+#tldr-overlay .tldr-hazard-stripe-lg {
+  height: 32px;
+  background: repeating-linear-gradient(-45deg, #E5FF00 0 18px, #000 18px 36px);
+}
+
+/* "THE SIGNAL:" heading */
+#tldr-overlay .tldr-signal-heading {
+  font-family: 'Anton', 'Archivo Black', sans-serif;
+  font-size: 44px;
+  line-height: 0.95;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 24px;
+}
+
+#tldr-overlay .tldr-signal-heading .haz { color: #E5FF00; }
+
+/* Loading state */
+#tldr-overlay .tldr-loading-hero {
+  font-family: 'Anton', 'Archivo Black', sans-serif;
+  font-size: 64px;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 24px;
+}
+
+#tldr-overlay .tldr-loading-hero .haz { color: #E5FF00; }
+
+#tldr-overlay .tldr-loading-sub {
+  margin-top: 18px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #9a9a9a;
+  letter-spacing: 0.05em;
+}
+
+/* Bullet list */
+#tldr-overlay .tldr-bullets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#tldr-overlay .tldr-bullet {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid #444;
+}
+
+#tldr-overlay .tldr-bullet-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #E5FF00;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  flex-shrink: 0;
+  padding-top: 3px;
+  width: 24px;
+}
+
+#tldr-overlay .tldr-bullet-text {
+  font-size: 18px;
+  line-height: 1.45;
+  color: #fff;
+}
+
+#tldr-overlay .tldr-bullet-text strong {
+  background: #E5FF00;
+  color: #000;
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+/* Content — h2, h3, ul, li, p overrides for rendered markdown */
 #tldr-overlay .tldr-content h2 {
   all: unset;
   display: block;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #111;
-  line-height: 1.35;
+  font-family: 'Anton', 'Archivo Black', sans-serif;
+  font-size: 28px;
+  line-height: 0.95;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  color: #fff;
   margin-top: 2rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.8rem;
 }
 
-#tldr-overlay .tldr-content h2:first-child {
-  margin-top: 0;
-}
+#tldr-overlay .tldr-content h2:first-child { margin-top: 0; }
 
 #tldr-overlay .tldr-content h3 {
   all: unset;
   display: block;
-  font-size: 1.05rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
   font-weight: 600;
-  color: #222;
-  line-height: 1.4;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #E5FF00;
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
 }
@@ -117,281 +233,198 @@
   all: unset;
   display: block;
   margin: 0 0 0.6rem 0;
-  padding-left: 1.4rem;
-  list-style: disc;
-}
-
-#tldr-overlay .tldr-content ul ul {
-  margin: 0.3rem 0 0.3rem 0;
-  list-style: circle;
+  padding: 0;
+  list-style: none;
 }
 
 #tldr-overlay .tldr-content li {
   all: unset;
-  display: list-item;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: #333;
-  margin: 0.35rem 0;
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+  border-top: 1px solid #333;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #ccc;
 }
 
-#tldr-overlay .tldr-content li li {
-  font-size: 0.9rem;
-  color: #555;
+#tldr-overlay .tldr-content li::before {
+  content: counter(tldr-bullet, decimal-leading-zero);
+  counter-increment: tldr-bullet;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #E5FF00;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  flex-shrink: 0;
+  padding-top: 3px;
+  width: 24px;
 }
+
+#tldr-overlay .tldr-content ul { counter-reset: tldr-bullet; }
+
+#tldr-overlay .tldr-content ul ul {
+  margin: 0.3rem 0 0.3rem 38px;
+  counter-reset: none;
+}
+
+#tldr-overlay .tldr-content ul ul li::before { content: none; }
+
+#tldr-overlay .tldr-content ul ul li {
+  padding: 4px 0;
+  border: none;
+  font-size: 14px;
+  color: #999;
+  display: list-item;
+  list-style: disc;
+}
+
+#tldr-overlay .tldr-content li li { border: none; }
 
 #tldr-overlay .tldr-content li strong {
+  background: #E5FF00;
+  color: #000;
+  padding: 0 4px;
   font-weight: 600;
-  color: #111;
 }
 
 #tldr-overlay .tldr-content p {
   all: unset;
   display: block;
-  font-size: 0.95rem;
+  font-size: 16px;
   line-height: 1.6;
-  color: #333;
+  color: #ccc;
   margin: 0.5rem 0;
 }
 
-#tldr-overlay .tldr-content em {
-  font-style: italic;
+#tldr-overlay .tldr-content em { font-style: italic; }
+
+/* Score panel in overlay */
+#tldr-overlay .tldr-score {
+  border-top: 1px solid #444;
+  padding-top: 14px;
+  margin-top: 24px;
 }
 
-/* Loading */
-#tldr-overlay .tldr-loading {
-  text-align: center;
-  padding: 5rem 0;
+/* Footer in overlay */
+#tldr-overlay .tldr-ov-footer {
+  margin-top: 36px;
+  padding-top: 14px;
+  border-top: 1px solid #444;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-#tldr-overlay .tldr-spinner {
-  width: 32px;
-  height: 32px;
-  margin: 0 auto 1rem;
-  border: 3px solid #e5e5e5;
-  border-top-color: #333;
-  border-radius: 50%;
-  animation: tldr-spin 0.7s linear infinite;
+/* Error */
+#tldr-overlay .tldr-error {
+  background: #1a0800;
+  border: 1.5px solid #FF4500;
+  padding: 1rem 1.25rem;
+  color: #FF4500;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  margin: 2rem 0;
 }
 
 @keyframes tldr-spin {
   to { transform: rotate(360deg); }
 }
 
-#tldr-overlay .tldr-loading-text {
-  font-size: 0.9rem;
-  color: #888;
-}
-
-/* Error */
-#tldr-overlay .tldr-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-  color: #991b1b;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin: 2rem 0;
-}
-
-/* ── Inline mode: floating bar ── */
+/* ── Inline bar ── */
 
 #tldr-inline-bar {
   all: initial;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   z-index: 2147483647;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  font-size: 13px;
+  font-family: -apple-system, system-ui, sans-serif;
   animation: tldr-fadein 0.15s ease;
 }
 
-#tldr-inline-bar .tldr-bar-inner {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 8px 16px;
+#tldr-inline-bar .tldr-bar-main {
+  background: #0a0a0a;
+  color: #fff;
+  border-bottom: 1.5px solid #E5FF00;
+  padding: 10px 18px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
-#tldr-inline-bar .tldr-bar-logo {
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+#tldr-inline-bar.tldr-bar-error .tldr-bar-main {
+  background: #FF4500;
   color: #000;
+  border-bottom-color: #000;
+}
+
+#tldr-inline-bar .tldr-bar-wordmark {
+  font-family: 'Anton', 'Archivo Black', sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
   flex-shrink: 0;
 }
+
+#tldr-inline-bar .tldr-bar-dot { color: #E5FF00; }
+#tldr-inline-bar.tldr-bar-error .tldr-bar-dot { color: #000; }
 
 #tldr-inline-bar .tldr-bar-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid #ddd;
-  border-top-color: #333;
+  border: 2px solid #555;
+  border-top-color: #E5FF00;
   border-radius: 50%;
   animation: tldr-spin 0.7s linear infinite;
   flex-shrink: 0;
 }
 
 #tldr-inline-bar .tldr-bar-stats {
-  font-size: 12px;
-  color: #666;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  text-transform: uppercase;
   flex: 1;
   min-width: 0;
 }
 
-#tldr-inline-bar .tldr-bar-stats strong {
-  color: #16a34a;
-  font-weight: 600;
-}
+#tldr-inline-bar .tldr-bar-stats .haz { color: #E5FF00; }
 
 #tldr-inline-bar .tldr-bar-close {
   all: unset;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  color: #555;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 4px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #fff;
+  border: 1.5px solid #fff;
+  padding: 5px 10px;
   white-space: nowrap;
-  flex-shrink: 0;
-  transition: background 0.1s;
+  transition: background 0.12s;
 }
 
 #tldr-inline-bar .tldr-bar-close:hover {
-  background: #f0f0f0;
-  color: #222;
+  background: #E5FF00;
+  color: #000;
+  border-color: #E5FF00;
 }
 
-#tldr-inline-bar.tldr-bar-error {
-  background: #fef2f2;
-  border-bottom-color: #fecaca;
+#tldr-inline-bar.tldr-bar-error .tldr-bar-close {
+  color: #000;
+  border-color: #000;
 }
 
-#tldr-inline-bar.tldr-bar-error .tldr-bar-stats {
-  color: #991b1b;
-}
-
-/* ── Dark mode ── */
-@media (prefers-color-scheme: dark) {
-  #tldr-overlay {
-    background: #161616;
-    color: #e0e0e0;
-  }
-
-  #tldr-overlay .tldr-header {
-    border-bottom-color: #333;
-    background: #161616;
-  }
-
-  #tldr-overlay .tldr-logo {
-    color: #f0f0f0;
-  }
-
-  #tldr-overlay .tldr-stats {
-    color: #777;
-  }
-
-  #tldr-overlay .tldr-stats strong {
-    color: #4ade80;
-  }
-
-  #tldr-overlay .tldr-close {
-    color: #999;
-    border-color: #444;
-  }
-
-  #tldr-overlay .tldr-close:hover {
-    background: #262626;
-    color: #ddd;
-  }
-
-  #tldr-overlay .tldr-content h2 {
-    color: #f0f0f0;
-  }
-
-  #tldr-overlay .tldr-content h3 {
-    color: #ddd;
-  }
-
-  #tldr-overlay .tldr-content li {
-    color: #ccc;
-  }
-
-  #tldr-overlay .tldr-content li li {
-    color: #999;
-  }
-
-  #tldr-overlay .tldr-content li strong {
-    color: #eee;
-  }
-
-  #tldr-overlay .tldr-content p {
-    color: #ccc;
-  }
-
-  #tldr-overlay .tldr-spinner {
-    border-color: #444;
-    border-top-color: #ccc;
-  }
-
-  #tldr-overlay .tldr-loading-text {
-    color: #777;
-  }
-
-  #tldr-overlay .tldr-error {
-    background: #2a1515;
-    border-color: #5c2828;
-    color: #fca5a5;
-  }
-
-  /* Inline bar dark mode */
-  #tldr-inline-bar {
-    background: #1e1e1e;
-    border-bottom-color: #333;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  #tldr-inline-bar .tldr-bar-logo {
-    color: #f0f0f0;
-  }
-
-  #tldr-inline-bar .tldr-bar-spinner {
-    border-color: #555;
-    border-top-color: #ccc;
-  }
-
-  #tldr-inline-bar .tldr-bar-stats {
-    color: #999;
-  }
-
-  #tldr-inline-bar .tldr-bar-stats strong {
-    color: #4ade80;
-  }
-
-  #tldr-inline-bar .tldr-bar-close {
-    color: #999;
-    border-color: #444;
-  }
-
-  #tldr-inline-bar .tldr-bar-close:hover {
-    background: #2a2a2a;
-    color: #ddd;
-  }
-
-  #tldr-inline-bar.tldr-bar-error {
-    background: #2a1515;
-    border-bottom-color: #5c2828;
-  }
-
-  #tldr-inline-bar.tldr-bar-error .tldr-bar-stats {
-    color: #fca5a5;
-  }
+/* Hazard stripe under inline bar */
+#tldr-inline-bar .tldr-bar-stripe {
+  height: 6px;
+  background: repeating-linear-gradient(-45deg, #E5FF00 0 8px, #000 8px 16px);
 }

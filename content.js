@@ -1,4 +1,4 @@
-// TLDR — Content Script
+// TLDR — Content Script · MSCHF direction
 // Extracts page content, sends to LLM, renders condensed result
 
 (() => {
@@ -6,15 +6,12 @@
   window.__tldrLoaded = true;
 
   let isActive = false;
-  let currentMode = 'overlay'; // 'overlay' | 'inline'
+  let currentMode = 'overlay';
   let currentDensity = { mode: 'smart', level: 3 };
   const MAX_WORDS = 8000;
 
-  // Overlay mode state
   let overlay = null;
-
-  // Inline mode state — one entry per condensed paragraph
-  let inlineEntries = null; // [{ element, originalHTML }, ...]
+  let inlineEntries = null;
   let inlineBar = null;
 
   // --- Message handling ---
@@ -49,13 +46,14 @@
   function dismiss() {
     isActive = false;
 
-    // Restore inline paragraphs
     if (inlineEntries) {
       for (const entry of inlineEntries) {
         entry.element.innerHTML = entry.originalHTML;
         entry.element.style.opacity = '';
         entry.element.style.transition = '';
         entry.element.style.display = '';
+        entry.element.style.borderLeft = '';
+        entry.element.style.paddingLeft = '';
       }
       inlineEntries = null;
     }
@@ -66,7 +64,6 @@
       inlineBar = null;
     }
 
-    // Dismiss overlay
     if (overlay) {
       if (overlay.__keyHandler)
         document.removeEventListener('keydown', overlay.__keyHandler);
@@ -103,14 +100,13 @@
     const { text: rawText, wordCount } = extractAllContent();
 
     if (wordCount < 50) {
-      showError('Not enough content on this page to condense.');
+      showError('\u00d7 NOT ENOUGH SIGNAL ON THIS PAGE');
       return;
     }
 
-    const text =
-      wordCount > MAX_WORDS
-        ? rawText.split(/\s+/).slice(0, MAX_WORDS).join(' ')
-        : rawText;
+    const text = wordCount > MAX_WORDS
+      ? rawText.split(/\s+/).slice(0, MAX_WORDS).join(' ')
+      : rawText;
 
     isActive = true;
     showLoadingOverlay(wordCount);
@@ -152,77 +148,132 @@
 
   function showLoadingOverlay(wordCount) {
     const el = createOverlay();
-    el.innerHTML = `
-      <div class="tldr-container">
-        <div class="tldr-header">
-          <div class="tldr-header-left">
-            <span class="tldr-logo">TLDR</span>
-            <span class="tldr-stats">${wordCount.toLocaleString()} words detected</span>
-          </div>
-          <button class="tldr-close" id="tldr-close">&times; Close</button>
-        </div>
-        <div class="tldr-loading">
-          <div class="tldr-spinner"></div>
-          <div class="tldr-loading-text">Condensing page&hellip;</div>
-        </div>
-      </div>`;
-    el.querySelector('#tldr-close').addEventListener('click', dismiss);
+    const container = document.createElement('div');
+    container.className = 'tldr-container';
+
+    // Header
+    const header = makeOverlayHeader('\u00d7 CANCEL', true);
+    container.appendChild(header);
+
+    // Loading hero
+    const hero = document.createElement('div');
+    hero.style.marginTop = '60px';
+
+    const heroText = document.createElement('div');
+    heroText.className = 'tldr-loading-hero';
+    heroText.innerHTML = 'Extracting<br>signal<span class="haz">.</span>';
+    hero.appendChild(heroText);
+
+    const stripe = document.createElement('div');
+    stripe.className = 'tldr-hazard-stripe-lg';
+    hero.appendChild(stripe);
+
+    const sub = document.createElement('div');
+    sub.className = 'tldr-loading-sub';
+    sub.textContent = `${wordCount.toLocaleString()} words detected \u00b7 this should take a moment`;
+    hero.appendChild(sub);
+
+    container.appendChild(hero);
+    el.appendChild(container);
   }
 
   function showResultOverlay(markdown, originalWordCount) {
     if (!overlay) createOverlay();
 
     const condensedWords = countWords(markdown);
-    const reduction = Math.round(
-      (1 - condensedWords / originalWordCount) * 100
-    );
+    const cut = originalWordCount - condensedWords;
+    const pct = Math.round(cut / originalWordCount * 100);
 
-    // Build overlay DOM safely (no innerHTML with LLM content)
+    // Update lifetime score
+    updateLifetimeScore(cut);
+
     const container = document.createElement('div');
     container.className = 'tldr-container';
 
-    const header = document.createElement('div');
-    header.className = 'tldr-header';
+    // Header with stamps
+    const statsSpan = document.createElement('span');
+    statsSpan.className = 'tldr-stamp tldr-stamp-outline';
+    statsSpan.textContent = `${cut.toLocaleString()} WORDS \u00b7 ${pct}% LESS`;
 
-    const headerLeft = document.createElement('div');
-    headerLeft.className = 'tldr-header-left';
+    const header = makeOverlayHeader('\u00d7 SHOW ORIGINAL', false, statsSpan);
+    container.appendChild(header);
 
-    const logo = document.createElement('span');
-    logo.className = 'tldr-logo';
-    logo.textContent = 'TLDR';
+    // "THE SIGNAL:" heading
+    const signalSection = document.createElement('div');
+    signalSection.style.marginTop = '32px';
 
-    const stats = document.createElement('span');
-    stats.className = 'tldr-stats';
-    stats.textContent = `${originalWordCount.toLocaleString()} \u2192 ${condensedWords.toLocaleString()} words `;
-    const strong = document.createElement('strong');
-    strong.textContent = `(${reduction}% less reading)`;
-    stats.appendChild(strong);
+    const signalHeading = document.createElement('div');
+    signalHeading.className = 'tldr-signal-heading';
+    signalHeading.innerHTML = 'The signal<span class="haz">:</span>';
+    signalSection.appendChild(signalHeading);
 
-    headerLeft.appendChild(logo);
-    headerLeft.appendChild(stats);
-
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'tldr-close';
-    closeBtn.textContent = '\u00D7 Show original';
-    closeBtn.addEventListener('click', dismiss);
-
-    header.appendChild(headerLeft);
-    header.appendChild(closeBtn);
-
+    // Rendered content
     const content = document.createElement('div');
     content.className = 'tldr-content';
     renderMarkdownDOM(markdown, content);
+    signalSection.appendChild(content);
 
-    container.appendChild(header);
-    container.appendChild(content);
+    container.appendChild(signalSection);
+
+    // Footer
+    const footer = document.createElement('div');
+    footer.className = 'tldr-ov-footer';
+    footer.textContent = '// TLDR \u00b7 DROP NO. 001 \u00b7 void where prohibited \u00b7 for entertainment purposes only';
+    container.appendChild(footer);
 
     overlay.innerHTML = '';
     overlay.appendChild(container);
     overlay.scrollTop = 0;
   }
 
+  function makeOverlayHeader(closeLabel, isLoading, statsEl) {
+    const header = document.createElement('div');
+    header.className = 'tldr-header';
+
+    const top = document.createElement('div');
+    top.className = 'tldr-header-top';
+
+    const left = document.createElement('div');
+    const wordmark = document.createElement('div');
+    wordmark.className = 'tldr-wordmark';
+    wordmark.innerHTML = 'TLDR<span class="tldr-haz-dot">.</span>';
+    left.appendChild(wordmark);
+
+    const stamps = document.createElement('div');
+    stamps.className = 'tldr-stamps';
+
+    if (isLoading) {
+      const extractStamp = document.createElement('span');
+      extractStamp.className = 'tldr-stamp tldr-stamp-extracting';
+      extractStamp.textContent = 'EXTRACTING SIGNAL';
+      stamps.appendChild(extractStamp);
+    } else {
+      const slopStamp = document.createElement('span');
+      slopStamp.className = 'tldr-stamp tldr-stamp-hazard';
+      slopStamp.textContent = 'SLOP REMOVED';
+      stamps.appendChild(slopStamp);
+      if (statsEl) stamps.appendChild(statsEl);
+    }
+    left.appendChild(stamps);
+    top.appendChild(left);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tldr-close';
+    closeBtn.textContent = closeLabel;
+    closeBtn.addEventListener('click', dismiss);
+    top.appendChild(closeBtn);
+
+    header.appendChild(top);
+
+    const stripe = document.createElement('div');
+    stripe.className = 'tldr-hazard-stripe';
+    header.appendChild(stripe);
+
+    return header;
+  }
+
   // =============================================
-  //  INLINE MODE — per-paragraph replacement
+  //  INLINE MODE
   // =============================================
 
   function condenseInline() {
@@ -230,22 +281,19 @@
     const paragraphs = collectParagraphs(root);
 
     if (paragraphs.length === 0) {
-      showError('No paragraphs found to condense.');
+      showError('\u00d7 NO PARAGRAPHS FOUND');
       return;
     }
 
     const originalWordCount = paragraphs.reduce(
-      (sum, p) => sum + countWords(p.text),
-      0
+      (sum, p) => sum + countWords(p.text), 0
     );
 
-    // Store originals for restoration
     inlineEntries = paragraphs.map((p) => ({
       element: p.element,
       originalHTML: p.element.innerHTML
     }));
 
-    // Dim each paragraph to indicate processing
     for (const entry of inlineEntries) {
       entry.element.style.opacity = '0.35';
       entry.element.style.transition = 'opacity 0.2s';
@@ -253,11 +301,10 @@
 
     isActive = true;
     createInlineBar(
-      `Condensing ${paragraphs.length} paragraphs&hellip;`,
-      true
+      `EXTRACTING SIGNAL \u00b7 ${paragraphs.length} PARAGRAPHS`,
+      'loading'
     );
 
-    // Build numbered text for the LLM
     const numbered = paragraphs
       .map((p, i) => `${i + 1}: ${p.text}`)
       .join('\n\n');
@@ -304,37 +351,38 @@
 
     for (let i = 0; i < inlineEntries.length; i++) {
       const entry = inlineEntries[i];
-      const text = condensed[i + 1]; // response is 1-indexed
+      const text = condensed[i + 1];
 
       entry.element.style.opacity = '';
       entry.element.style.transition = '';
 
       if (text) {
-        // LLM marked paragraph as redundant — hide it entirely
-        if (/^[-–—]$/.test(text.trim())) {
+        if (/^[-\u2013\u2014]$/.test(text.trim())) {
+          // Redaction bar for cut paragraphs
           entry.element.style.display = 'none';
         } else {
           entry.element.textContent = text;
+          entry.element.style.borderLeft = '3px solid #E5FF00';
+          entry.element.style.paddingLeft = '14px';
           condensedWordCount += countWords(text);
         }
       } else {
-        // No condensed version — keep original
         condensedWordCount += countWords(entry.element.innerText);
       }
     }
 
-    const reduction = Math.round(
-      (1 - condensedWordCount / originalWordCount) * 100
-    );
+    const cut = originalWordCount - condensedWordCount;
+    const pct = Math.round(cut / originalWordCount * 100);
+    updateLifetimeScore(cut);
+
     createInlineBar(
-      `${originalWordCount.toLocaleString()} &rarr; ${condensedWordCount.toLocaleString()} words <strong>(${reduction}% less reading)</strong>`,
-      false
+      `SLOP REMOVED \u00b7 <span class="haz">${cut.toLocaleString()} WORDS</span> \u00b7 ${pct}% LESS`,
+      'success'
     );
   }
 
   function parseNumberedResponse(text) {
     const result = {};
-    // Match lines like "1: condensed text" — handles multiline by being greedy per entry
     const regex = /^(\d+):\s*(.+)/gm;
     let match;
     while ((match = regex.exec(text)) !== null) {
@@ -343,32 +391,34 @@
     return result;
   }
 
-  // --- Inline bar (floating notification) ---
+  // --- Inline bar ---
 
-  function createInlineBar(statsHTML, isLoading) {
+  function createInlineBar(statsHTML, mode) {
     if (inlineBar) {
       if (inlineBar.__keyHandler)
         document.removeEventListener('keydown', inlineBar.__keyHandler);
       inlineBar.remove();
     }
 
+    const isLoading = mode === 'loading';
+    const isError = mode === 'error';
+
     inlineBar = document.createElement('div');
     inlineBar.id = 'tldr-inline-bar';
-    if (isLoading) inlineBar.classList.add('tldr-bar-loading');
+    if (isError) inlineBar.classList.add('tldr-bar-error');
 
     inlineBar.innerHTML = `
-      <div class="tldr-bar-inner">
-        <span class="tldr-bar-logo">TLDR</span>
+      <div class="tldr-bar-main">
+        <span class="tldr-bar-wordmark">TLDR<span class="tldr-bar-dot">.</span></span>
         ${isLoading ? '<span class="tldr-bar-spinner"></span>' : ''}
         <span class="tldr-bar-stats">${statsHTML}</span>
-        <button class="tldr-bar-close">${isLoading ? 'Cancel' : 'Show original'}</button>
-      </div>`;
+        <button class="tldr-bar-close">${isLoading ? '\u00d7 CANCEL' : '\u00d7 UNDO'}</button>
+      </div>
+      <div class="tldr-bar-stripe"></div>`;
 
     document.body.appendChild(inlineBar);
 
-    inlineBar
-      .querySelector('.tldr-bar-close')
-      .addEventListener('click', dismiss);
+    inlineBar.querySelector('.tldr-bar-close').addEventListener('click', dismiss);
     inlineBar.__keyHandler = (e) => {
       if (e.key === 'Escape') dismiss();
     };
@@ -381,7 +431,6 @@
 
   function showError(message) {
     if (currentMode === 'inline') {
-      // Restore dimmed paragraphs
       if (inlineEntries) {
         for (const entry of inlineEntries) {
           entry.element.innerHTML = entry.originalHTML;
@@ -390,8 +439,7 @@
         }
         inlineEntries = null;
       }
-      createInlineBar(esc(message), false);
-      inlineBar.classList.add('tldr-bar-error');
+      createInlineBar(esc(message), 'error');
       setTimeout(() => {
         if (inlineBar && inlineBar.classList.contains('tldr-bar-error'))
           dismiss();
@@ -399,23 +447,36 @@
       return;
     }
 
-    // Overlay mode
     if (!overlay) createOverlay();
-    overlay.innerHTML = `
-      <div class="tldr-container">
-        <div class="tldr-header">
-          <div class="tldr-header-left">
-            <span class="tldr-logo">TLDR</span>
-          </div>
-          <button class="tldr-close" id="tldr-close">&times; Close</button>
-        </div>
-        <div class="tldr-error">${esc(message)}</div>
-      </div>`;
-    overlay.querySelector('#tldr-close').addEventListener('click', dismiss);
+    overlay.innerHTML = '';
+    const container = document.createElement('div');
+    container.className = 'tldr-container';
+
+    const header = makeOverlayHeader('\u00d7 CLOSE', false);
+    container.appendChild(header);
+
+    const errDiv = document.createElement('div');
+    errDiv.className = 'tldr-error';
+    errDiv.textContent = message;
+    container.appendChild(errDiv);
+
+    overlay.appendChild(container);
   }
 
   // =============================================
-  //  CONTENT EXTRACTION (overlay mode)
+  //  LIFETIME SCORE
+  // =============================================
+
+  function updateLifetimeScore(wordsCut) {
+    if (wordsCut <= 0) return;
+    chrome.storage.local.get('lifetimeWordsCut', (s) => {
+      const newTotal = (s.lifetimeWordsCut || 0) + wordsCut;
+      chrome.storage.local.set({ lifetimeWordsCut: newTotal });
+    });
+  }
+
+  // =============================================
+  //  CONTENT EXTRACTION
   // =============================================
 
   function extractAllContent() {
@@ -522,16 +583,14 @@
   }
 
   // =============================================
-  //  MARKDOWN → DOM RENDERER (overlay mode)
-  //  Uses DOM APIs (textContent / createElement) to
-  //  avoid innerHTML with LLM-generated content.
+  //  MARKDOWN → DOM RENDERER
   // =============================================
 
   function renderMarkdownDOM(md, container) {
     const lines = md.split('\n');
-    let currentUl = null;   // top-level <ul>
-    let currentLi = null;   // last top-level <li>
-    let subUl = null;        // nested <ul> inside currentLi
+    let currentUl = null;
+    let currentLi = null;
+    let subUl = null;
 
     function closeSubList() {
       if (subUl) {
@@ -585,15 +644,12 @@
     closeTopList();
   }
 
-  // Appends text with **bold** and *italic* as DOM nodes (no innerHTML).
   function appendFormattedText(parent, text) {
-    // Split on bold and italic markers, create text/strong/em nodes
     const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
     let lastIndex = 0;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-      // Text before this match
       if (match.index > lastIndex) {
         parent.appendChild(
           document.createTextNode(text.slice(lastIndex, match.index))
@@ -601,12 +657,10 @@
       }
 
       if (match[2]) {
-        // **bold**
         const strong = document.createElement('strong');
         strong.textContent = match[2];
         parent.appendChild(strong);
       } else if (match[3]) {
-        // *italic*
         const em = document.createElement('em');
         em.textContent = match[3];
         parent.appendChild(em);
@@ -615,7 +669,6 @@
       lastIndex = match.index + match[0].length;
     }
 
-    // Remaining text after last match
     if (lastIndex < text.length) {
       parent.appendChild(document.createTextNode(text.slice(lastIndex)));
     }

@@ -2,82 +2,106 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>TLDR</h1>
-      <span class="tagline">Density-aware page condenser</span>
+  <div class="pop">
+    <!-- Header -->
+    <div class="pop-header">
+      <div class="pop-wordmark">TLDR<span class="haz-dot">.</span></div>
+      <span class="stamp dim">DROP 001</span>
     </div>
 
-    <button id="condense" class="btn primary">Condense this page</button>
-    <div id="status" class="status"></div>
+    <!-- CTA -->
+    <button id="condense" class="pop-cta">Condense this page</button>
 
-    <button id="settings-toggle" class="btn toggle">Settings</button>
+    <!-- Status line -->
+    <div id="status" class="pop-status">// ALT+T TO TRIGGER</div>
 
-    <div class="settings hidden" id="settings">
-      <label class="check-label">
-        <input type="checkbox" id="autoRun">
-        <span>Auto-condense on page load</span>
-      </label>
-      <div id="autoRunWarning" class="warning hidden">
-        Every page you visit will have its content sent to your configured LLM API. Avoid sensitive sites (banking, medical, email) while enabled.
+    <!-- Settings toggle -->
+    <button id="settings-toggle" class="pop-settings-toggle">+ Settings</button>
+
+    <div class="pop-settings hidden" id="settings">
+      <!-- Density -->
+      <div class="pop-section">
+        <div class="pop-density-header">
+          <span class="pop-label">// Density</span>
+          <label class="pop-smart-toggle" id="smartLabel">
+            <span class="pop-smart-box" id="smartBox"></span>
+            <input type="checkbox" id="densitySmart" checked>
+            Smart
+          </label>
+        </div>
+        <div class="pop-ticks" id="densityTicks"></div>
+        <input type="range" id="densityLevel" class="pop-range" min="1" max="5" value="3" step="1">
+        <div class="pop-step-labels" id="stepLabels"></div>
+        <div class="pop-step-readout" id="stepReadout"></div>
       </div>
 
-      <label for="displayMode">Display mode</label>
-      <select id="displayMode">
-        <option value="overlay">Full page overlay</option>
-        <option value="inline">Replace in page</option>
-      </select>
-
-      <label>Condensation</label>
-      <div class="density-control">
-        <label class="check-label">
-          <input type="checkbox" id="densitySmart" checked>
-          <span>Smart (density-aware)</span>
-        </label>
-        <div id="densitySliderGroup" class="hidden">
-          <input type="range" id="densityLevel" min="1" max="5" value="3" step="1" list="density-ticks">
-          <datalist id="density-ticks">
-            <option value="1"></option>
-            <option value="2"></option>
-            <option value="3"></option>
-            <option value="4"></option>
-            <option value="5"></option>
-          </datalist>
-          <div class="density-range-labels">
-            <span>Some fluff</span>
-            <span>Exec summary</span>
-          </div>
-          <div id="densityDesc" class="density-desc"></div>
+      <!-- Display mode -->
+      <div class="pop-section">
+        <div class="pop-label">// Display</div>
+        <div class="pop-segmented" id="displayMode">
+          <button class="seg-btn active" data-value="overlay">Overlay</button>
+          <button class="seg-btn" data-value="inline">Inline</button>
         </div>
       </div>
 
-      <label for="provider">Provider</label>
-      <select id="provider">
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
-        <option value="custom">Custom (OpenAI-compatible)</option>
-      </select>
-
-      <label for="apiKey">API Key</label>
-      <input type="password" id="apiKey" placeholder="Enter your API key">
-
-      <label for="model">Model</label>
-      <select id="model"></select>
-
-      <div id="customModelGroup" class="field-group hidden">
-        <input type="text" id="customModel" placeholder="Enter model ID">
+      <!-- Auto-run -->
+      <div class="pop-section-sm">
+        <label class="pop-check" id="autoRunLabel">
+          <span class="pop-check-box" id="autoRunBox"></span>
+          <input type="checkbox" id="autoRun">
+          Auto-condense on page load
+        </label>
+        <div id="autoRunWarning" class="pop-warning hidden">
+          Every page you visit will have its content sent to your configured LLM API.
+        </div>
       </div>
 
-      <div id="baseUrlGroup" class="field-group hidden">
-        <label for="baseUrl">Base URL</label>
-        <input type="text" id="baseUrl" placeholder="http://localhost:11434/v1">
+      <!-- Provider & Model -->
+      <div class="pop-grid-2">
+        <div>
+          <div class="pop-label">// Provider</div>
+          <select id="provider" class="pop-ctrl">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div>
+          <div class="pop-label">// Model</div>
+          <select id="model" class="pop-ctrl"></select>
+        </div>
       </div>
 
-      <button id="save" class="btn secondary">Save settings</button>
-      <div id="saved" class="saved hidden">Settings saved</div>
+      <div id="customModelGroup" class="hidden">
+        <input type="text" id="customModel" class="pop-input" placeholder="Enter model ID">
+      </div>
+
+      <div id="baseUrlGroup" class="hidden">
+        <div class="pop-label">// Base URL</div>
+        <input type="text" id="baseUrl" class="pop-input" placeholder="http://localhost:11434/v1">
+      </div>
+
+      <!-- API Key -->
+      <div class="pop-section-sm">
+        <div class="pop-label">// API Key</div>
+        <input type="password" id="apiKey" class="pop-input" placeholder="sk-...">
+        <div class="pop-hint">// stored locally · never leaves your browser</div>
+      </div>
+    </div>
+
+    <!-- Score -->
+    <div class="pop-score" id="scorePanel"></div>
+
+    <!-- Footer -->
+    <div class="pop-footer">
+      Void where prohibited · For entertainment purposes only<br>
+      Not responsible for information you miss
     </div>
   </div>
 
