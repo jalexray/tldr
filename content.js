@@ -412,6 +412,7 @@
         <span class="tldr-bar-wordmark">TLDR<span class="tldr-bar-dot">.</span></span>
         ${isLoading ? '<span class="tldr-bar-spinner"></span>' : ''}
         <span class="tldr-bar-stats">${statsHTML}</span>
+        ${!isLoading ? '<button class="tldr-bar-close tldr-bar-settings">\u2699 SETTINGS</button>' : ''}
         <button class="tldr-bar-close tldr-bar-undo">${isLoading ? '\u00d7 CANCEL' : '\u00d7 UNDO'}</button>
         ${!isLoading ? '<button class="tldr-bar-close tldr-bar-dismiss">\u00d7 CLOSE</button>' : ''}
       </div>
@@ -420,6 +421,10 @@
     document.body.appendChild(inlineBar);
 
     inlineBar.querySelector('.tldr-bar-undo').addEventListener('click', dismiss);
+    const settingsBtn = inlineBar.querySelector('.tldr-bar-settings');
+    if (settingsBtn) settingsBtn.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ action: 'openPopup' });
+    });
     const dismissBtn = inlineBar.querySelector('.tldr-bar-dismiss');
     if (dismissBtn) dismissBtn.addEventListener('click', dismissBarOnly);
     inlineBar.__keyHandler = (e) => {

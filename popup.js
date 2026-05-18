@@ -398,6 +398,25 @@ $('#excludeInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addExcludePattern();
 });
 
+$('#skipCurrentSite').addEventListener('click', async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.url) {
+      const hostname = new URL(tab.url).hostname;
+      if (hostname && !excludePatterns.includes(hostname)) {
+        excludePatterns.push(hostname);
+        saveExcludePatterns();
+        renderExcludeList();
+        showStatus(`// EXCLUDED ${hostname.toUpperCase()}`, 'saved');
+      } else {
+        showStatus('// ALREADY EXCLUDED', 'saved');
+      }
+    }
+  } catch {
+    showStatus('\u00d7 CANNOT READ CURRENT PAGE', 'error');
+  }
+});
+
 $('#provider').addEventListener('change', () => {
   populateModels();
   syncUI();

@@ -525,6 +525,29 @@ body {
   color: #000;
 }
 
+.pop-skip-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1.5px solid var(--fg3);
+  background: transparent;
+  color: var(--fg2);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  border-radius: 0;
+}
+
+.pop-skip-btn:hover {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
 .exclude-empty {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;

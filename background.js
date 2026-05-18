@@ -141,6 +141,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     );
     sendResponse({ ok: true });
   }
+  if (message.action === 'openPopup') {
+    chrome.action.openPopup().catch(() => {
+      // Fallback: open popup.html in a new tab if openPopup isn't supported
+      chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
+    });
+    sendResponse({ ok: true });
+  }
   return true;
 });
 
