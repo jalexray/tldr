@@ -291,7 +291,8 @@
 
     inlineEntries = paragraphs.map((p) => ({
       element: p.element,
-      originalHTML: p.element.innerHTML
+      originalHTML: p.element.innerHTML,
+      links: p.links || []
     }));
 
     for (const entry of inlineEntries) {
@@ -328,7 +329,17 @@
       if (isInsideSkippable(p, root)) continue;
       const text = p.innerText.trim();
       if (text.length < 40) continue;
-      results.push({ element: p, text });
+
+      // Collect links for re-attachment after condensation
+      const links = [];
+      for (const a of p.querySelectorAll('a[href]')) {
+        const linkText = a.textContent.trim();
+        if (linkText.length > 0) {
+          links.push({ text: linkText, href: a.href });
+        }
+      }
+
+      results.push({ element: p, text, links });
     }
 
     return results;
@@ -361,7 +372,7 @@
           // Redaction bar for cut paragraphs
           entry.element.style.display = 'none';
         } else {
-          entry.element.textContent = text;
+          setTextWithLinks(entry.element, text, entry.links);
           entry.element.style.borderLeft = '3px solid #E5FF00';
           entry.element.style.paddingLeft = '14px';
           condensedWordCount += countWords(text);
@@ -592,6 +603,60 @@
 
   function countWords(text) {
     return text.split(/\s+/).filter(Boolean).length;
+  }
+
+  // Re-attaches links from the original paragraph to the condensed text.
+  // If the LLM preserved a link's text, it gets re-linked. If not, plain text.
+  function setTextWithLinks(element, text, links) {
+    element.innerHTML = '';
+
+    if (!links || links.length === 0) {
+      element.textContent = text;
+      return;
+    }
+
+    // Find where each link's text appears in the condensed output
+    const matches = [];
+    for (const link of links) {
+      const idx = text.indexOf(link.text);
+      if (idx !== -1) {
+        matches.push({ start: idx, end: idx + link.text.length, href: link.href, text: link.text });
+      }
+    }
+
+    if (matches.length === 0) {
+      element.textContent = text;
+      return;
+    }
+
+    // Sort by position, remove overlaps
+    matches.sort((a, b) => a.start - b.start);
+    const clean = [];
+    let lastEnd = 0;
+    for (const m of matches) {
+      if (m.start >= lastEnd) {
+        clean.push(m);
+        lastEnd = m.end;
+      }
+    }
+
+    // Build DOM nodes: text + links interleaved
+    let pos = 0;
+    for (const m of clean) {
+      if (m.start > pos) {
+        element.appendChild(document.createTextNode(text.slice(pos, m.start)));
+      }
+      const a = document.createElement('a');
+      a.href = m.href;
+      a.textContent = m.text;
+      a.style.color = 'inherit';
+      a.style.textDecoration = 'underline';
+      element.appendChild(a);
+      pos = m.end;
+    }
+    if (pos < text.length) {
+      element.appendChild(document.createTextNode(text.slice(pos)));
+    }
   }
 
   // =============================================
