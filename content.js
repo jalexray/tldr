@@ -423,7 +423,7 @@
     inlineBar.querySelector('.tldr-bar-undo').addEventListener('click', dismiss);
     const settingsBtn = inlineBar.querySelector('.tldr-bar-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: 'openPopup' });
+      chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
     });
     const dismissBtn = inlineBar.querySelector('.tldr-bar-dismiss');
     if (dismissBtn) dismissBtn.addEventListener('click', dismissBarOnly);
