@@ -356,7 +356,8 @@ function getAllSettings() {
     model: getEffectiveModel(),
     baseUrl: $('#baseUrl').value.trim(),
     densityMode: $('#densitySmart').checked ? 'smart' : 'custom',
-    densityLevel: parseInt($('#densityLevel').value)
+    densityLevel: parseInt($('#densityLevel').value),
+    excludePatterns
   };
 }
 
