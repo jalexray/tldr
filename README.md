@@ -1,6 +1,6 @@
 # TLDR
 
-![STOP READING SLOP.](cover-photo.png)
+![STOP READING SLOP.](plugin-assets/cover-photo.png)
 
 Chrome extension that condenses web pages using LLMs. Cut through the slop, keep the signal.
 
