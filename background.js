@@ -156,17 +156,54 @@ async function injectContentScript(tabId) {
   });
 }
 
+// =============================================
+//  CONTEXT MENU — "Condense similar text"
+// =============================================
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'tldr-condense-similar',
+    title: 'TLDR: Condense this & similar text',
+    contexts: ['page', 'selection']
+  });
+  chrome.contextMenus.create({
+    id: 'tldr-click-to-condense',
+    title: 'TLDR: Click-to-condense mode',
+    contexts: ['page', 'selection']
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (!tab?.id) return;
+  const actions = {
+    'tldr-condense-similar': 'condense-similar',
+    'tldr-click-to-condense': 'toggle-click-mode'
+  };
+  const action = actions[info.menuItemId];
+  if (!action) return;
+  try {
+    await injectContentScript(tab.id);
+    await chrome.tabs.sendMessage(tab.id, { action });
+  } catch {
+    // Content script not loaded
+  }
+});
+
 // Handle keyboard shortcut
 chrome.commands.onCommand.addListener(async (command) => {
-  if (command === 'condense-page') {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id) {
-      try {
-        await injectContentScript(tab.id);
-        await chrome.tabs.sendMessage(tab.id, { action: 'trigger' });
-      } catch {
-        // Content script not loaded — happens on chrome:// pages
-      }
+  const actions = {
+    'condense-page': 'trigger',
+    'click-to-condense': 'toggle-click-mode'
+  };
+  const action = actions[command];
+  if (!action) return;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    try {
+      await injectContentScript(tab.id);
+      await chrome.tabs.sendMessage(tab.id, { action });
+    } catch {
+      // Content script not loaded — happens on chrome:// pages
     }
   }
 });

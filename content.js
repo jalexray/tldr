@@ -13,6 +13,15 @@
   let overlay = null;
   let inlineEntries = null;
   let inlineBar = null;
+  let lastRightClickedEl = null;
+  let allCondensedEntries = [];   // accumulates across multiple condense-similar calls
+  let clickToCondenseMode = false;
+  let clickCondensePending = false; // true while waiting for a result
+
+  // Track right-clicked element for "Condense similar text" context menu
+  document.addEventListener('contextmenu', (e) => {
+    lastRightClickedEl = e.target;
+  }, true);
 
   // --- Message handling ---
 
@@ -32,6 +41,14 @@
       case 'error':
         showError(msg.error);
         break;
+      case 'condense-similar':
+        condenseSimilar();
+        sendResponse({ ok: true });
+        break;
+      case 'toggle-click-mode':
+        toggleClickToCondense();
+        sendResponse({ ok: true });
+        break;
       case 'ping':
         sendResponse({ ok: true });
         break;
@@ -45,6 +62,18 @@
 
   function dismiss() {
     isActive = false;
+    disableClickToCondense();
+
+    // Restore all accumulated condense-similar entries
+    for (const entry of allCondensedEntries) {
+      entry.element.innerHTML = entry.originalHTML;
+      entry.element.style.opacity = '';
+      entry.element.style.transition = '';
+      entry.element.style.display = '';
+      entry.element.style.borderLeft = '';
+      entry.element.style.paddingLeft = '';
+    }
+    allCondensedEntries = [];
 
     if (inlineEntries) {
       for (const entry of inlineEntries) {
@@ -323,6 +352,320 @@
     });
   }
 
+  // =============================================
+  //  CONDENSE SIMILAR — right-click context menu
+  // =============================================
+
+  async function condenseSimilar() {
+    if (!lastRightClickedEl) {
+      showError('\u00d7 RIGHT-CLICK ON TEXT FIRST');
+      return;
+    }
+
+    // Walk up from the clicked element to find the nearest block-level text container
+    const target = findTextContainer(lastRightClickedEl);
+    if (!target || target.innerText.trim().length < 10) {
+      showError('\u00d7 NO TEXT FOUND AT CLICK TARGET');
+      return;
+    }
+
+    const similar = findSimilarElements(target);
+    if (similar.length === 0) {
+      showError('\u00d7 NO SIMILAR TEXT FOUND');
+      return;
+    }
+
+    // Filter out elements already condensed in a previous batch
+    const alreadyCondensed = new Set(allCondensedEntries.map(e => e.element));
+    const newElements = similar.filter(el => !alreadyCondensed.has(el));
+
+    if (newElements.length === 0) {
+      showError('\u00d7 ALREADY CONDENSED');
+      return;
+    }
+
+    const settings = await chrome.storage.local.get([
+      'densityMode', 'densityLevel'
+    ]);
+    currentMode = 'inline';
+    currentDensity = {
+      mode: settings.densityMode || 'smart',
+      level: parseInt(settings.densityLevel) || 3
+    };
+
+    const originalWordCount = newElements.reduce(
+      (sum, el) => sum + countWords(el.innerText.trim()), 0
+    );
+
+    // Build new batch entries (inlineEntries drives the result handler)
+    inlineEntries = newElements.map((el) => ({
+      element: el,
+      originalHTML: el.innerHTML,
+      links: collectLinks(el)
+    }));
+
+    // Accumulate for undo
+    allCondensedEntries.push(...inlineEntries);
+
+    for (const entry of inlineEntries) {
+      entry.element.style.opacity = '0.35';
+      entry.element.style.transition = 'opacity 0.2s';
+    }
+
+    isActive = true;
+    createInlineBar(
+      `EXTRACTING SIGNAL \u00b7 ${newElements.length} SIMILAR ELEMENTS`,
+      'loading'
+    );
+
+    const numbered = newElements
+      .map((el, i) => `${i + 1}: ${el.innerText.trim()}`)
+      .join('\n\n');
+
+    chrome.runtime.sendMessage({
+      action: 'condense',
+      content: numbered,
+      title: document.title,
+      wordCount: originalWordCount,
+      mode: 'inline',
+      densityMode: currentDensity.mode,
+      densityLevel: currentDensity.level
+    });
+  }
+
+  function collectLinks(el) {
+    const links = [];
+    for (const a of el.querySelectorAll('a[href]')) {
+      const linkText = a.textContent.trim();
+      if (linkText.length > 0) {
+        links.push({ text: linkText, href: a.href });
+      }
+    }
+    return links;
+  }
+
+  // =============================================
+  //  CLICK-TO-CONDENSE MODE
+  // =============================================
+
+  function toggleClickToCondense() {
+    if (clickToCondenseMode) {
+      disableClickToCondense();
+      if (allCondensedEntries.length === 0) dismiss();
+    } else {
+      enableClickToCondense();
+    }
+  }
+
+  function enableClickToCondense() {
+    clickToCondenseMode = true;
+    clickCondensePending = false;
+    isActive = true;
+    document.addEventListener('click', onClickToCondense, true);
+    createInlineBar('CLICK-TO-CONDENSE \u00b7 CLICK ANY TEXT TO CONDENSE', 'success');
+  }
+
+  function disableClickToCondense() {
+    clickToCondenseMode = false;
+    clickCondensePending = false;
+    document.removeEventListener('click', onClickToCondense, true);
+  }
+
+  function exitClickModeKeepResults() {
+    disableClickToCondense();
+    const count = allCondensedEntries.length;
+    if (count > 0) {
+      createInlineBar(
+        `SLOP REMOVED \u00b7 <span class="haz">${count} ELEMENTS</span> CONDENSED`,
+        'success'
+      );
+    } else {
+      dismiss();
+    }
+  }
+
+  async function onClickToCondense(e) {
+    // Ignore clicks on the TLDR bar itself
+    if (e.target.closest('#tldr-inline-bar')) return;
+
+    if (clickCondensePending) return; // wait for current result
+
+    const target = findTextContainer(e.target);
+    if (!target || target.innerText.trim().length < 10) return;
+
+    // Skip if already condensed
+    if (allCondensedEntries.some(entry => entry.element === target)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const settings = await chrome.storage.local.get([
+      'densityMode', 'densityLevel'
+    ]);
+    currentMode = 'inline';
+    currentDensity = {
+      mode: settings.densityMode || 'smart',
+      level: parseInt(settings.densityLevel) || 3
+    };
+
+    const text = target.innerText.trim();
+    const originalWordCount = countWords(text);
+
+    inlineEntries = [{
+      element: target,
+      originalHTML: target.innerHTML,
+      links: collectLinks(target)
+    }];
+
+    allCondensedEntries.push(...inlineEntries);
+
+    target.style.opacity = '0.35';
+    target.style.transition = 'opacity 0.2s';
+
+    clickCondensePending = true;
+    createInlineBar('CLICK-TO-CONDENSE \u00b7 CONDENSING\u2026', 'loading');
+
+    chrome.runtime.sendMessage({
+      action: 'condense',
+      content: `1: ${text}`,
+      title: document.title,
+      wordCount: originalWordCount,
+      mode: 'inline',
+      densityMode: currentDensity.mode,
+      densityLevel: currentDensity.level
+    });
+  }
+
+  // Walk up from a potentially inline element (span, text node, etc.)
+  // to find the nearest block-level text container.
+  function findTextContainer(el) {
+    const blockTags = new Set([
+      'P', 'TD', 'TH', 'LI', 'DIV', 'BLOCKQUOTE', 'PRE',
+      'DD', 'DT', 'FIGCAPTION', 'SUMMARY', 'CAPTION'
+    ]);
+    let node = el;
+    while (node && node !== document.body) {
+      if (blockTags.has(node.tagName)) return node;
+      node = node.parentElement;
+    }
+    return el; // fallback to the element itself
+  }
+
+  // Find elements structurally similar to the target.
+  // Tries multiple strategies: table columns, ARIA grids, repeating-ancestor
+  // pattern (works for div-based virtual tables), class matching, and siblings.
+  function findSimilarElements(target) {
+    const tag = target.tagName;
+
+    // --- Strategy 1: Real table cells — match by column index ---
+    if (tag === 'TD' || tag === 'TH') {
+      const row = target.closest('tr');
+      const scope = target.closest('tbody') || target.closest('table');
+      if (row && scope) {
+        const colIndex = Array.from(row.children).indexOf(target);
+        const cells = [];
+        for (const tr of scope.querySelectorAll(':scope > tr')) {
+          const cell = tr.children[colIndex];
+          if (cell && (cell.tagName === 'TD' || cell.tagName === 'TH') &&
+              cell.innerText.trim().length >= 30) {
+            cells.push(cell);
+          }
+        }
+        if (cells.length > 1) return cells;
+      }
+    }
+
+    // --- Strategy 2: Repeating-ancestor pattern ---
+    // Walk up from target to find the nearest ancestor that repeats (has 3+
+    // siblings with the same tag). Then use nth-child position to locate the
+    // matching descendant in every sibling row.
+    {
+      const result = matchViaRepeatingAncestor(target);
+      if (result.length > 1) return result;
+    }
+
+    // --- Strategy 3: Class-based matching (try each class individually) ---
+    if (target.classList.length > 0) {
+      // Try all classes first, then fall back to individual distinctive classes
+      const allClassSelector = tag.toLowerCase() + '.' +
+        Array.from(target.classList).join('.');
+      const allMatches = Array.from(document.querySelectorAll(allClassSelector))
+        .filter(el => el.innerText.trim().length >= 30 && !isInsideSkippable(el, document.body));
+      if (allMatches.length > 1) return allMatches;
+
+      // Try each class individually (longest first — more specific)
+      const classes = Array.from(target.classList).sort((a, b) => b.length - a.length);
+      for (const cls of classes) {
+        const matches = Array.from(document.querySelectorAll(`${tag.toLowerCase()}.${cls}`))
+          .filter(el => el.innerText.trim().length >= 30 && !isInsideSkippable(el, document.body));
+        if (matches.length > 1) return matches;
+      }
+    }
+
+    // --- Strategy 4: Direct siblings with same tag ---
+    const parent = target.parentElement;
+    if (parent) {
+      const siblings = Array.from(parent.children)
+        .filter(el => el.tagName === tag && el.innerText.trim().length >= 30);
+      if (siblings.length > 1) return siblings;
+    }
+
+    // --- Fallback: just the target element ---
+    return target.innerText.trim().length >= 30 ? [target] : [];
+  }
+
+  // Walk up from `target` through ALL ancestor levels, trying each repeating
+  // level (3+ same-tag siblings). For each level, replay the child-index path
+  // from that ancestor down to the target in every sibling. Return the level
+  // that produces the most matches — this ensures we find rows-across-a-table
+  // rather than cells-within-a-row.
+  function matchViaRepeatingAncestor(target) {
+    let node = target;
+    let bestResult = [];
+    const path = []; // child indices from current node down to target
+
+    while (node && node !== document.body) {
+      const parent = node.parentElement;
+      if (!parent || parent === document.body) break;
+
+      const childIndex = Array.from(parent.children).indexOf(node);
+      path.unshift(childIndex);
+
+      const sameTagSiblings = Array.from(parent.children)
+        .filter(c => c.tagName === node.tagName);
+
+      if (sameTagSiblings.length >= 3 && path.length > 0) {
+        // path[0] is the index of `node` within `parent` — the rest is
+        // the descent from `node` to `target`.
+        const descent = path.slice(1);
+        const results = [];
+        for (const sibling of sameTagSiblings) {
+          const match = walkPath(sibling, descent);
+          if (match && match.innerText.trim().length >= 30) {
+            results.push(match);
+          }
+        }
+        if (results.length > bestResult.length) {
+          bestResult = results;
+        }
+      }
+
+      node = parent;
+    }
+
+    return bestResult;
+  }
+
+  // Follow a sequence of child indices from a root element.
+  function walkPath(root, indices) {
+    let el = root;
+    for (const idx of indices) {
+      if (!el || !el.children || !el.children[idx]) return null;
+      el = el.children[idx];
+    }
+    return el;
+  }
+
   function collectParagraphs(root) {
     const results = [];
 
@@ -373,9 +716,13 @@
       entry.element.style.transition = '';
 
       if (text) {
-        if (/^[-\u2013\u2014]$/.test(text.trim())) {
-          // Redaction bar for cut paragraphs
+        if (/^[-\u2013\u2014]$/.test(text.trim()) && !clickToCondenseMode) {
+          // Redaction bar for cut paragraphs (skip in click-to-condense —
+          // user explicitly chose this text, so never hide it)
           entry.element.style.display = 'none';
+        } else if (/^[-\u2013\u2014]$/.test(text.trim()) && clickToCondenseMode) {
+          // In click mode, keep original text when LLM wants to redact
+          condensedWordCount += countWords(entry.element.innerText);
         } else {
           setTextWithLinks(entry.element, text, entry.links);
           entry.element.style.borderLeft = '3px solid #E5FF00';
@@ -391,10 +738,18 @@
     const pct = Math.round(cut / originalWordCount * 100);
     updateLifetimeScore(cut);
 
-    createInlineBar(
-      `SLOP REMOVED \u00b7 <span class="haz">${cut.toLocaleString()} WORDS</span> \u00b7 ${pct}% LESS`,
-      'success'
-    );
+    if (clickToCondenseMode) {
+      clickCondensePending = false;
+      createInlineBar(
+        `CLICK-TO-CONDENSE \u00b7 <span class="haz">${cut.toLocaleString()} WORDS</span> CUT \u00b7 CLICK MORE TEXT`,
+        'success'
+      );
+    } else {
+      createInlineBar(
+        `SLOP REMOVED \u00b7 <span class="haz">${cut.toLocaleString()} WORDS</span> \u00b7 ${pct}% LESS`,
+        'success'
+      );
+    }
   }
 
   function parseNumberedResponse(text) {
@@ -423,11 +778,16 @@
     inlineBar.id = 'tldr-inline-bar';
     if (isError) inlineBar.classList.add('tldr-bar-error');
 
+    const exitModeBtn = clickToCondenseMode && !isLoading
+      ? '<button class="tldr-bar-close tldr-bar-exit-mode">\u00d7 EXIT MODE</button>'
+      : '';
+
     inlineBar.innerHTML = `
       <div class="tldr-bar-main">
         <span class="tldr-bar-wordmark">TLDR<span class="tldr-bar-dot">.</span></span>
         ${isLoading ? '<span class="tldr-bar-spinner"></span>' : ''}
         <span class="tldr-bar-stats">${statsHTML}</span>
+        ${exitModeBtn}
         <button class="tldr-bar-close tldr-bar-undo">${isLoading ? '\u00d7 CANCEL' : '\u00d7 UNDO'}</button>
         ${!isLoading ? '<button class="tldr-bar-close tldr-bar-dismiss">\u00d7 CLOSE</button>' : ''}
       </div>
@@ -435,6 +795,8 @@
 
     document.body.appendChild(inlineBar);
 
+    const exitBtn = inlineBar.querySelector('.tldr-bar-exit-mode');
+    if (exitBtn) exitBtn.addEventListener('click', exitClickModeKeepResults);
     inlineBar.querySelector('.tldr-bar-undo').addEventListener('click', dismiss);
     const dismissBtn = inlineBar.querySelector('.tldr-bar-dismiss');
     if (dismissBtn) dismissBtn.addEventListener('click', dismissBarOnly);

@@ -7,7 +7,8 @@
     "activeTab",
     "storage",
     "scripting",
-    "tabs"
+    "tabs",
+    "contextMenus"
   ],
   "optional_host_permissions": [
     "<all_urls>"
@@ -36,6 +37,13 @@
         "mac": "Alt+T"
       },
       "description": "Condense or restore the current page"
+    },
+    "click-to-condense": {
+      "suggested_key": {
+        "default": "Alt+D",
+        "mac": "Alt+D"
+      },
+      "description": "Toggle click-to-condense mode"
     }
   }
 }
